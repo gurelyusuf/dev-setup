@@ -45,13 +45,22 @@ Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm
 
 ## macOS settings
 
+- Appearance: dark mode; English interface with Turkey as the region
 - Keyboard: fast key repeat, full keyboard navigation, fn key for dictation
 - Text substitutions off: smart quotes, smart dashes, auto-capitalization, auto-correct, double-space period
-- Natural scrolling off
-- Finder: show file extensions and hidden files, path bar, status bar; no `.DS_Store` on network and USB drives
+- Trackpad: natural scrolling off, pointer speed, two-finger secondary click
+- Windows: double-clicking a title bar fills the screen; no screenshot thumbnail
+- Finder: show file extensions and hidden files, path bar, status bar, folders first, search the current folder, new windows open Desktop, no disks on the desktop, no `.DS_Store` on network and USB drives
 - Dock: size, magnification, hot corners and pinned apps (Chrome, iTerm2, VS Code)
+- Power: display sleeps after 10 minutes on battery, 60 minutes on power adapter
 - Require password immediately after the screen locks
 - Touch ID for `sudo`
+
+## Git settings
+
+- Asks for name and email, offers to create an SSH key
+- Global ignore file (`.DS_Store`, `.claude/settings.local.json`)
+- Larger HTTP buffer and timeout for big pushes
 
 ## Install
 

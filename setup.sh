@@ -253,6 +253,11 @@ configure_git() {
     [[ -n "$email" ]] && git config --global user.email "$email" || warn "git user.email is not set"
   fi
   [[ -n "$(git config --global init.defaultBranch || true)" ]] || git config --global init.defaultBranch main
+  # Larger buffer and longer timeout so big pushes over HTTPS do not fail.
+  git config --global http.postBuffer 524288000
+  git config --global http.timeout 300
+  # Git reads this path by default; no core.excludesFile setting is needed.
+  fetch config/git/ignore "$HOME/.config/git/ignore"
 
   local key="$HOME/.ssh/id_ed25519"
   if [[ -f "$key" ]]; then
@@ -296,8 +301,30 @@ configure_macos() {
 
   step "macOS: trackpad and mouse"
   set_default NSGlobalDomain com.apple.swipescrolldirection -bool false   # natural scrolling off
+  set_default NSGlobalDomain com.apple.trackpad.scaling -float 1.5        # pointer speed
+  # Secondary click with two fingers (built-in and Bluetooth trackpads).
+  set_default com.apple.AppleMultitouchTrackpad TrackpadRightClick -bool true
+  set_default com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick -bool true
+
+  step "macOS: appearance, language and windows"
+  set_default NSGlobalDomain AppleInterfaceStyle -string Dark
+  # English interface with Turkey as the region (dates, numbers, currency).
+  defaults write NSGlobalDomain AppleLanguages -array "en-TR" || warn "could not set AppleLanguages"
+  set_default NSGlobalDomain AppleLocale -string en_TR
+  # Double-clicking a title bar fills the screen instead of minimizing.
+  set_default NSGlobalDomain AppleActionOnDoubleClick -string Fill
+  set_default NSGlobalDomain AppleMiniaturizeOnDoubleClick -bool false
+  set_default com.apple.screencapture show-thumbnail -bool false
 
   step "macOS: Finder"
+  set_default com.apple.finder _FXSortFoldersFirst -bool true
+  set_default com.apple.finder FXDefaultSearchScope -string SCcf          # search the current folder
+  set_default com.apple.finder FXEnableExtensionChangeWarning -bool false
+  set_default com.apple.finder NewWindowTarget -string PfDe               # new windows open Desktop
+  set_default com.apple.finder NewWindowTargetPath -string "file://$HOME/Desktop/"
+  set_default com.apple.finder ShowHardDrivesOnDesktop -bool false
+  set_default com.apple.finder ShowExternalHardDrivesOnDesktop -bool false
+  set_default com.apple.finder ShowRemovableMediaOnDesktop -bool false
   set_default NSGlobalDomain AppleShowAllExtensions -bool true
   set_default com.apple.finder AppleShowAllFiles -bool true
   set_default com.apple.finder ShowPathbar -bool true
@@ -353,6 +380,11 @@ configure_macos() {
   else
     warn "Touch ID for sudo needs macOS 14 or later; skipped"
   fi
+
+  step "macOS: power"
+  # Battery: display off after 10 min, sleep after 1. Power adapter: display off after 60 min, never sleep.
+  sudo pmset -b displaysleep 10 sleep 1 || warn "could not set battery power settings"
+  sudo pmset -c displaysleep 60 sleep 0 || warn "could not set power adapter settings"
 }
 
 verify() {
@@ -386,7 +418,10 @@ Left for you to do by hand:
      project's docker-compose file.
   3. Sign in:  gh auth login   |   claude   |   codex
   4. Put machine-specific exports and secrets in ~/.zshrc.local
-  5. Log out and back in so the key repeat and scroll settings take effect.
+  5. Log out and back in so the keyboard, trackpad, appearance and language
+     settings take effect.
+  6. Make Chrome the default browser: System Settings > Desktop & Dock >
+     Default web browser.
 EOF
 }
 
