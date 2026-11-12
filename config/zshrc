@@ -1,0 +1,26 @@
+# Powerlevel10k instant prompt. Must stay at the top of the file.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Oh My Zsh
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+source "$ZSH/oh-my-zsh.sh"
+
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# PATH: user binaries (Claude Code) and the PostgreSQL client tools (psql, pg_dump)
+export PATH="$HOME/.local/bin:$PATH"
+[[ -n "$HOMEBREW_PREFIX" ]] && export PATH="$HOMEBREW_PREFIX/opt/libpq/bin:$PATH"
+
+# Node, pnpm and other runtimes are managed by mise
+command -v mise >/dev/null && eval "$(mise activate zsh)"
+
+# Prompt config. Run `p10k configure` to regenerate.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Machine-specific settings and secrets live here; setup.sh never touches this file.
+[[ ! -f ~/.zshrc.local ]] || source ~/.zshrc.local

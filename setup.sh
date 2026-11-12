@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+#
+# Development environment bootstrap for macOS.
+#
+# Hosted on GitHub and always run from a pinned commit, so the code that runs
+# is exactly the code that was reviewed. ./install-command.sh prints the
+# command for the current commit; it looks like this:
+#
+#   REF=<40-character commit hash>
+#   /bin/bash -c "$(curl --proto '=https' --tlsv1.2 -fsSL \
+#     https://raw.githubusercontent.com/gurelyusuf/dev-setup/$REF/setup.sh)" setup.sh "$REF"
+#
+# The hash is passed twice on purpose: once to download this file, once so
+# this file downloads config/ from the very same commit.
+#
+# Safe to re-run: every step checks whether its work is already done.
+# Written for the stock macOS bash (3.2); avoid bash 4+ features.
+
+set -euo pipefail
+
+# GitHub repository (owner/name) that hosts this script and config/.
+# It must be public: raw.githubusercontent.com serves private repos only with a token.
+REPO="${SETUP_REPO:-gurelyusuf/dev-setup}"
+
+# Built in preflight() from the commit hash argument. SETUP_BASE_URL=file:///path
+# overrides it for local testing.
+BASE_URL="${SETUP_BASE_URL:-}"
+
+FORMULAE="git gh mise libpq"
+# Optional CLI tools, add to FORMULAE if wanted: jq ripgrep fd eza zoxide
+
+# cask-name|App bundle name (used to skip apps that IT already installed)
+CASKS="
+iterm2|iTerm.app
+visual-studio-code|Visual Studio Code.app
+orbstack|OrbStack.app
+google-chrome|Google Chrome.app
+postman|Postman.app
+microsoft-teams|Microsoft Teams.app
+pgadmin4|pgAdmin 4.app
+codex|
+font-jetbrains-mono-nerd-font|
+"
+
+VSCODE_EXTENSIONS="
+anthropic.claude-code
+openai.chatgpt
+dbaeumer.vscode-eslint
+esbenp.prettier-vscode
+editorconfig.editorconfig
+yoavbls.pretty-ts-errors
+vivaxy.vscode-conventional-commits
+ms-azuretools.vscode-containers
+ms-azuretools.vscode-docker
+github.vscode-github-actions
+ms-vscode-remote.remote-ssh
+ms-vscode-remote.remote-ssh-edit
+ms-vscode.remote-explorer
+cedricverlinden.cursor-dark
+helgardrichard.helium-icon-theme
+miguelsolorio.symbols
+dee-catsey.coding-cat
+"
+
+BACKUP_DIR="$HOME/.dev-setup-backup/$(date +%Y%m%d-%H%M%S)"
+WARNINGS=""
+
+# ---------------------------------------------------------------- helpers
+
+step() { printf '\n\033[1;34m==>\033[0m \033[1m%s\033[0m\n' "$*"; }
+info() { printf '    %s\n' "$*"; }
+warn() { printf '\033[1;33m    ! %s\033[0m\n' "$*"; WARNINGS="${WARNINGS}  - $*"$'\n'; }
+die()  { printf '\033[1;31mError:\033[0m %s\n' "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# Prompts read from the terminal so they still work under `curl | bash`.
+ask() { # ask "Question" VARNAME
+  local reply=""
+  if [[ -r /dev/tty ]]; then
+    printf '    %s ' "$1" >/dev/tty
+    read -r reply </dev/tty || true
+  fi
+  eval "$2=\$reply"
+}
+
+confirm() { # confirm "Question" -> 0 on yes
+  local reply=""
+  ask "$1 [y/N]" reply
+  [[ "$reply" == "y" || "$reply" == "Y" ]]
+}
+
+# fetch <path under BASE_URL> <destination>
+# Downloads to a temp file, backs up any different existing file, then moves
+# the download into place. Integrity comes from the pinned commit in BASE_URL.
+fetch() {
+  local rel="$1" dest="$2" tmp proto="=https"
+  case "$BASE_URL" in file://*) proto="=file" ;; esac
+  tmp="$(mktemp)"
+  curl --proto "$proto" --tlsv1.2 -fsSL "$BASE_URL/$rel" -o "$tmp" \
+    || { rm -f "$tmp"; die "Could not download $BASE_URL/$rel"; }
+
+
+  mkdir -p "$(dirname "$dest")"
+  if [[ -e "$dest" ]]; then
+    if cmp -s "$tmp" "$dest"; then
+      rm -f "$tmp"; info "unchanged: $dest"; return 0
+    fi
+    mkdir -p "$BACKUP_DIR"
+    cp -p "$dest" "$BACKUP_DIR/$(basename "$dest")"
+    info "backed up existing $(basename "$dest") to $BACKUP_DIR"
+  fi
+  mv "$tmp" "$dest"
+  info "installed: $dest"
+}
+
+clone_once() { # clone_once <repo url> <destination>
+  if [[ -d "$2" ]]; then info "already present: $(basename "$2")"; return 0; fi
+  git clone --depth=1 --quiet "$1" "$2" && info "cloned: $(basename "$2")"
+}
+
+# ------------------------------------------------------------------ steps
+
+preflight() {
+  step "Checking the machine"
+  [[ "$(uname -s)" == "Darwin" ]] || die "This script only supports macOS."
+  [[ "$(id -u)" -ne 0 ]] || die "Run as your normal user, not with sudo."
+  if [[ -z "$BASE_URL" ]]; then
+    [[ "$REF" =~ ^[0-9a-f]{40}$ ]] || die "Pass the full 40-character commit hash as the first argument (got '${REF:-nothing}'). Branch names and short hashes are refused because they can change."
+    BASE_URL="https://raw.githubusercontent.com/$REPO/$REF"
+  fi
+  case "$BASE_URL" in https://*|file://*) ;; *) die "BASE_URL must start with https://" ;; esac
+  info "source: $BASE_URL"
+  info "macOS $(sw_vers -productVersion) on $(uname -m)"
+}
+
+install_homebrew() {
+  step "Homebrew"
+  if ! have brew && [[ ! -x /opt/homebrew/bin/brew && ! -x /usr/local/bin/brew ]]; then
+    info "Homebrew needs administrator rights; you may be asked for your password."
+    sudo -v </dev/tty || die "Administrator rights are required to install Homebrew."
+    # The installer also installs the Xcode Command Line Tools (needed for git).
+    NONINTERACTIVE=1 /bin/bash -c \
+      "$(curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  else
+    info "already installed"
+  fi
+
+  if [[ -x /opt/homebrew/bin/brew ]]; then BREW=/opt/homebrew/bin/brew; else BREW=/usr/local/bin/brew; fi
+  eval "$("$BREW" shellenv)"
+
+  local line="eval \"\$($BREW shellenv)\""
+  touch "$HOME/.zprofile"
+  grep -qF "$line" "$HOME/.zprofile" || { printf '%s\n' "$line" >>"$HOME/.zprofile"; info "added brew to ~/.zprofile"; }
+}
+
+install_packages() {
+  step "Command line tools"
+  local f
+  for f in $FORMULAE; do
+    if brew list --formula "$f" >/dev/null 2>&1; then info "already installed: $f"
+    else brew install "$f" || warn "brew install $f failed"; fi
+  done
+
+  step "Applications"
+  local entry cask app
+  printf '%s\n' "$CASKS" | while IFS= read -r entry; do
+    [[ -n "$entry" ]] || continue
+    cask="${entry%%|*}"; app="${entry#*|}"
+    if brew list --cask "$cask" >/dev/null 2>&1; then
+      info "already installed: $cask"
+    elif [[ -n "$app" && -d "/Applications/$app" ]]; then
+      info "already in /Applications, skipping: $app"
+    else
+      brew install --cask "$cask" </dev/null || echo "$cask" >>"$FAILED_CASKS"
+    fi
+  done
+  if [[ -s "$FAILED_CASKS" ]]; then
+    warn "these apps could not be installed: $(tr '\n' ' ' <"$FAILED_CASKS")"
+  fi
+}
+
+install_shell() {
+  step "Oh My Zsh, powerlevel10k and plugins"
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    info "already installed: Oh My Zsh"
+  else
+    RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \
+      "$(curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+      "" --unattended
+  fi
+  local custom="$HOME/.oh-my-zsh/custom"
+  clone_once https://github.com/romkatv/powerlevel10k.git "$custom/themes/powerlevel10k"
+  clone_once https://github.com/zsh-users/zsh-autosuggestions.git "$custom/plugins/zsh-autosuggestions"
+  clone_once https://github.com/zsh-users/zsh-syntax-highlighting.git "$custom/plugins/zsh-syntax-highlighting"
+
+  step "Shell config"
+  fetch config/zshrc "$HOME/.zshrc"
+  fetch config/p10k.zsh "$HOME/.p10k.zsh"
+}
+
+install_node() {
+  step "Node.js, pnpm and NestJS CLI (via mise)"
+  # Let mise honour .nvmrc / .node-version files found in projects.
+  mise settings set idiomatic_version_file_enable_tools node || warn "could not enable .nvmrc support in mise"
+  mise use --global node@lts pnpm@latest || { warn "mise could not install node/pnpm"; return 0; }
+  if mise exec -- npm ls -g --depth=0 @nestjs/cli >/dev/null 2>&1; then
+    info "already installed: @nestjs/cli"
+  else
+    mise exec -- npm install -g @nestjs/cli || warn "npm install -g @nestjs/cli failed"
+  fi
+}
+
+configure_iterm() {
+  step "iTerm2 settings"
+  local dir="$HOME/.config/iterm2"
+  pgrep -xq iTerm2 && warn "iTerm2 is running; quit and reopen it to load the imported settings"
+  fetch config/iterm/com.googlecode.iterm2.plist "$dir/com.googlecode.iterm2.plist"
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$dir"
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+}
+
+configure_vscode() {
+  step "VS Code settings and extensions"
+  local user_dir="$HOME/Library/Application Support/Code/User"
+  fetch config/vscode/settings.json "$user_dir/settings.json"
+  fetch config/vscode/keybindings.json "$user_dir/keybindings.json"
+
+  local code_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  have code && code_bin="$(command -v code)"
+  if [[ ! -x "$code_bin" ]]; then
+    warn "VS Code CLI not found; extensions were not installed"
+    return 0
+  fi
+  local installed ext
+  installed="$("$code_bin" --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+  for ext in $VSCODE_EXTENSIONS; do
+    if printf '%s\n' "$installed" | grep -qx "$ext"; then info "already installed: $ext"
+    else "$code_bin" --install-extension "$ext" --force >/dev/null 2>&1 && info "installed: $ext" || warn "extension failed: $ext"; fi
+  done
+}
+
+install_agents() {
+  step "Claude Code and Codex"
+  export PATH="$HOME/.local/bin:$PATH"
+  if have claude; then
+    info "already installed: claude"
+  else
+    curl --proto '=https' --tlsv1.2 -fsSL https://claude.ai/install.sh | bash || warn "Claude Code install failed"
+  fi
+  have codex && info "codex is installed" || warn "codex not found (cask install may have failed)"
+}
+
+configure_git() {
+  step "Git identity and SSH key"
+  local name email
+  if [[ -z "$(git config --global user.name || true)" ]]; then
+    ask "Git user name for this machine:" name
+    [[ -n "$name" ]] && git config --global user.name "$name" || warn "git user.name is not set"
+  fi
+  if [[ -z "$(git config --global user.email || true)" ]]; then
+    ask "Git email for this machine:" email
+    [[ -n "$email" ]] && git config --global user.email "$email" || warn "git user.email is not set"
+  fi
+  [[ -n "$(git config --global init.defaultBranch || true)" ]] || git config --global init.defaultBranch main
+
+  local key="$HOME/.ssh/id_ed25519"
+  if [[ -f "$key" ]]; then
+    info "SSH key already exists: $key"
+  elif confirm "Generate a new SSH key for this machine?"; then
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    ssh-keygen -t ed25519 -C "$(git config --global user.email || hostname)" -f "$key" </dev/tty
+    if ! grep -q "UseKeychain" "$HOME/.ssh/config" 2>/dev/null; then
+      printf 'Host *\n  AddKeysToAgent yes\n  UseKeychain yes\n  IdentityFile ~/.ssh/id_ed25519\n' >>"$HOME/.ssh/config"
+      chmod 600 "$HOME/.ssh/config"
+    fi
+    ssh-add --apple-use-keychain "$key" </dev/tty || true
+    info "Public key (add it to GitHub with: gh ssh-key add $key.pub):"
+    info "$(cat "$key.pub")"
+  fi
+}
+
+verify() {
+  step "Verification"
+  export PATH="$HOME/.local/bin:${HOMEBREW_PREFIX:-/opt/homebrew}/opt/libpq/bin:$PATH"
+  local c v
+  for c in brew git gh mise psql code claude codex; do
+    if have "$c"; then
+      v="$("$c" --version 2>/dev/null | head -1)"
+      printf '    \033[32mok\033[0m       %-7s %s\n' "$c" "$v"
+    else
+      printf '    \033[31mmissing\033[0m  %s\n' "$c"
+    fi
+  done
+  for c in node pnpm nest; do
+    if v="$(mise exec -- "$c" --version 2>/dev/null | head -1)"; then
+      printf '    \033[32mok\033[0m       %-7s %s\n' "$c" "$v"
+    else
+      printf '    \033[31mmissing\033[0m  %s\n' "$c"
+    fi
+  done
+
+  if [[ -n "$WARNINGS" ]]; then
+    printf '\n\033[1;33mWarnings:\033[0m\n%s' "$WARNINGS"
+  fi
+  cat <<'EOF'
+
+Left for you to do by hand:
+  1. Open a new iTerm2 window so the new shell config loads.
+  2. Open OrbStack once to finish its setup; PostgreSQL runs from each
+     project's docker-compose file.
+  3. Sign in:  gh auth login   |   claude   |   codex
+  4. Put machine-specific exports and secrets in ~/.zshrc.local
+EOF
+}
+
+main() {
+  REF="${1:-}"
+  FAILED_CASKS="$(mktemp)"
+  trap 'rm -f "$FAILED_CASKS"' EXIT
+  preflight
+  install_homebrew
+  install_packages
+  install_shell
+  install_node
+  configure_iterm
+  configure_vscode
+  install_agents
+  configure_git
+  verify
+}
+
+# Calling main on the last line means a truncated download runs nothing.
+# The guard lets the file be sourced for testing without running the install.
+if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

@@ -1,0 +1,108 @@
+{
+  "extensions.ignoreRecommendations": true,
+  "editor.accessibilitySupport": "off",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.fontFamily": "SF Mono, 'Courier New', monospace, Cascadia Code",
+  "editor.fontLigatures": true,
+  "editor.formatOnSave": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.multiCursorModifier": "ctrlCmd",
+  "editor.renderWhitespace": "all",
+  "editor.minimap.enabled": false,
+  "editor.cursorBlinking": "phase",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.guides.indentation": true,
+  "editor.unicodeHighlight.nonBasicASCII": false,
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "git.autofetch": true,
+  "terminal.explorerKind": "external",
+  "terminal.integrated.fontFamily": "MesloLGS NF, JetBrainsMono Nerd Font Mono",
+  "workbench.colorTheme": "cursor-dark",
+  "workbench.iconTheme": "helium-icon-theme",
+  "workbench.startupEditor": "none",
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
+  "workbench.editor.empty.hint": "hidden",
+  "workbench.colorCustomizations": {
+    "editorCursor.foreground": "#C5C5C5",
+    "terminalCursor.foreground": "#C5C5C5",
+    "editor.lineHighlightBackground": "#232323",
+    "editor.selectionBackground": "#264F78"
+  },
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "name": "Italic semantic group",
+        "scope": [
+          "comment",
+          "storage.modifier",
+          "entity.other.attribute-name",
+          "markup.underline.link",
+          "variable.language.this",
+          "variable.language.super"
+        ],
+        "settings": {
+          "fontStyle": "italic"
+        }
+      },
+      {
+        "name": "Reset italics for operators",
+        "scope": [
+          "keyword.operator",
+          "storage.type",
+          "storage.type.primitive"
+        ],
+        "settings": {
+          "fontStyle": ""
+        }
+      }
+    ]
+  },
+  "editor.semanticTokenColorCustomizations": {
+    "enabled": true,
+    "rules": {
+      "class": "#4EC9B0",
+      "struct": "#4EC9B0",
+      "interface": "#4EC9B0",
+      "enum": "#B8D7A3",
+      "function": "#E6B450",
+      "method": "#E6B450",
+      "variable": "#9CDCFE",
+      "parameter": "#9CDCFE",
+      "property": "#9CDCFE",
+      "keyword": "#C586C0",
+      "modifier": "#C586C0",
+      "string": "#CE9178",
+      "number": "#B5CEA8",
+      "boolean": "#569CD6",
+      "comment": {
+        "foreground": "#6A9955",
+        "fontStyle": "italic"
+      }
+    }
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.formatOnSave": false
+  },
+  "claudeCode.preferredLocation": "panel",
+  "explorer.confirmPasteNative": false,
+  "git.enableSmartCommit": true,
+  "chat.editing.confirmEditRequestRemoval": false,
+  "editor.fontSize": 13,
+  "chat.editor.fontSize": 13,
+  "chat.fontSize": 12,
+  "workbench.editor.enablePreview": false,
+  "workbench.productIconTheme": "codecat",
+  "editor.wordWrap": "on",
+  "git.openRepositoryInParentFolders": "always",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "diffEditor.renderSideBySide": false,
+  "security.promptForLocalFileProtocolHandling": false,
+  "window.openFoldersInNewWindow": "on",
+  "chat.titleBar.openInAgentsWindow.enabled": false
+}
