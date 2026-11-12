@@ -48,18 +48,9 @@ openai.chatgpt
 dbaeumer.vscode-eslint
 esbenp.prettier-vscode
 editorconfig.editorconfig
-yoavbls.pretty-ts-errors
-vivaxy.vscode-conventional-commits
 ms-azuretools.vscode-containers
-ms-azuretools.vscode-docker
 github.vscode-github-actions
 ms-vscode-remote.remote-ssh
-ms-vscode-remote.remote-ssh-edit
-ms-vscode.remote-explorer
-cedricverlinden.cursor-dark
-helgardrichard.helium-icon-theme
-miguelsolorio.symbols
-dee-catsey.coding-cat
 "
 
 BACKUP_DIR="$HOME/.dev-setup-backup/$(date +%Y%m%d-%H%M%S)"
@@ -279,6 +270,91 @@ configure_git() {
   fi
 }
 
+set_default() { # set_default <domain> <key> <-type> <value>
+  defaults write "$1" "$2" "$3" "$4" || warn "could not set $1 $2"
+}
+
+dock_add() { # dock_add </path/to/App.app>
+  if [[ ! -d "$1" ]]; then info "not installed, left out of the Dock: $(basename "$1" .app)"; return 0; fi
+  defaults write com.apple.dock persistent-apps -array-add \
+    "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>$1</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>"
+}
+
+configure_macos() {
+  step "macOS: keyboard"
+  set_default NSGlobalDomain KeyRepeat -int 2
+  set_default NSGlobalDomain InitialKeyRepeat -int 15
+  set_default NSGlobalDomain AppleKeyboardUIMode -int 2          # Tab moves between all controls
+  set_default com.apple.HIToolbox AppleFnUsageType -int 3        # fn key starts dictation
+  # Text substitutions corrupt pasted code and commands.
+  set_default NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
+  set_default NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
+  set_default NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
+  set_default NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+  set_default NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
+  set_default NSGlobalDomain WebAutomaticSpellingCorrectionEnabled -bool false
+
+  step "macOS: trackpad and mouse"
+  set_default NSGlobalDomain com.apple.swipescrolldirection -bool false   # natural scrolling off
+
+  step "macOS: Finder"
+  set_default NSGlobalDomain AppleShowAllExtensions -bool true
+  set_default com.apple.finder AppleShowAllFiles -bool true
+  set_default com.apple.finder ShowPathbar -bool true
+  set_default com.apple.finder ShowStatusBar -bool true
+  set_default com.apple.desktopservices DSDontWriteNetworkStores -bool true
+  set_default com.apple.desktopservices DSDontWriteUSBStores -bool true
+
+  step "macOS: Dock"
+  set_default com.apple.dock orientation -string bottom
+  set_default com.apple.dock autohide -bool false
+  set_default com.apple.dock tilesize -int 71
+  set_default com.apple.dock magnification -bool true
+  set_default com.apple.dock largesize -int 73
+  set_default com.apple.dock mineffect -string genie
+  set_default com.apple.dock minimize-to-application -bool true
+  set_default com.apple.dock show-recents -bool false
+  set_default com.apple.dock expose-group-apps -bool true
+  set_default com.apple.dock enterMissionControlByTopWindowDrag -bool false
+  # Hot corners: bottom-left opens Quick Note, bottom-right shows the desktop.
+  set_default com.apple.dock wvous-bl-corner -int 14
+  set_default com.apple.dock wvous-bl-modifier -int 0
+  set_default com.apple.dock wvous-br-corner -int 4
+  set_default com.apple.dock wvous-br-modifier -int 0
+  # Replace the Dock's app list. Apps that are not installed are left out.
+  defaults write com.apple.dock persistent-apps -array
+  defaults write com.apple.dock persistent-others -array
+  dock_add "/Applications/Google Chrome.app"
+  dock_add "/Applications/Adobe Photoshop 2025/Adobe Photoshop 2025.app"
+  dock_add "/Applications/Spotify.app"
+  dock_add "/Applications/iTerm.app"
+  dock_add "/Applications/Visual Studio Code.app"
+
+  killall Dock >/dev/null 2>&1 || true
+  killall Finder >/dev/null 2>&1 || true
+
+  step "macOS: security"
+  if sysadminctl -screenLock status 2>&1 | grep -q "is immediate"; then
+    info "screen lock already requires the password immediately"
+  else
+    info "Requiring the password immediately after the screen locks; macOS asks for your password."
+    sysadminctl -screenLock immediate -password - </dev/tty \
+      || warn "could not change the screen lock delay (it may be managed by your company)"
+  fi
+
+  if grep -Eq '^auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so' /etc/pam.d/sudo_local 2>/dev/null; then
+    info "Touch ID for sudo already enabled"
+  elif [[ -f /etc/pam.d/sudo_local.template ]]; then
+    info "Enabling Touch ID for sudo; you may be asked for your password."
+    # sudo_local survives macOS updates, unlike edits to /etc/pam.d/sudo.
+    sed -E 's/^#(auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so)/\1/' /etc/pam.d/sudo_local.template \
+      | sudo tee /etc/pam.d/sudo_local >/dev/null \
+      || warn "could not enable Touch ID for sudo (administrator rights needed)"
+  else
+    warn "Touch ID for sudo needs macOS 14 or later; skipped"
+  fi
+}
+
 verify() {
   step "Verification"
   export PATH="$HOME/.local/bin:${HOMEBREW_PREFIX:-/opt/homebrew}/opt/libpq/bin:$PATH"
@@ -310,6 +386,7 @@ Left for you to do by hand:
      project's docker-compose file.
   3. Sign in:  gh auth login   |   claude   |   codex
   4. Put machine-specific exports and secrets in ~/.zshrc.local
+  5. Log out and back in so the key repeat and scroll settings take effect.
 EOF
 }
 
@@ -326,6 +403,7 @@ main() {
   configure_vscode
   install_agents
   configure_git
+  configure_macos
   verify
 }
 
