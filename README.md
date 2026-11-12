@@ -1,6 +1,6 @@
 # dev-setup
 
-Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm2, VS Code, OrbStack, Oh My Zsh, mise, Claude Code and Codex, plus my shell, terminal and editor settings.
+Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm2, VS Code, OrbStack, Oh My Zsh, nvm, Claude Code and Codex, plus my shell, terminal and editor settings.
 
 ## What gets installed
 
@@ -9,7 +9,7 @@ Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm
 - Homebrew
 - git
 - GitHub CLI (`gh`)
-- mise
+- nvm
 - PostgreSQL client tools (`psql`, via `libpq`)
 - Node.js LTS
 - pnpm

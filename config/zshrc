@@ -3,10 +3,16 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+# Node versions are managed by nvm (installed with Homebrew). The Oh My Zsh
+# nvm plugin loads it and runs `nvm use` when a folder has an .nvmrc file.
+export NVM_DIR="$HOME/.nvm"
+[[ -n "$HOMEBREW_PREFIX" ]] && export NVM_HOMEBREW="$HOMEBREW_PREFIX/opt/nvm"
+zstyle ':omz:plugins:nvm' autoload yes
+
 # Oh My Zsh
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(git nvm zsh-autosuggestions zsh-syntax-highlighting)
 source "$ZSH/oh-my-zsh.sh"
 
 export LANG=en_US.UTF-8
@@ -15,9 +21,6 @@ export LC_ALL=en_US.UTF-8
 # PATH: user binaries (Claude Code) and the PostgreSQL client tools (psql, pg_dump)
 export PATH="$HOME/.local/bin:$PATH"
 [[ -n "$HOMEBREW_PREFIX" ]] && export PATH="$HOMEBREW_PREFIX/opt/libpq/bin:$PATH"
-
-# Node, pnpm and other runtimes are managed by mise
-command -v mise >/dev/null && eval "$(mise activate zsh)"
 
 # Prompt config. Run `p10k configure` to regenerate.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

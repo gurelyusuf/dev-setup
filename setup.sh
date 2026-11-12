@@ -26,7 +26,10 @@ REPO="${SETUP_REPO:-gurelyusuf/dev-setup}"
 # overrides it for local testing.
 BASE_URL="${SETUP_BASE_URL:-}"
 
-FORMULAE="git gh mise libpq"
+FORMULAE="git gh nvm libpq"
+
+# npm packages installed globally into every Node.js version.
+NODE_GLOBAL_PACKAGES="pnpm @nestjs/cli"
 # Optional CLI tools, add to FORMULAE if wanted: jq ripgrep fd eza zoxide
 
 # cask-name|App bundle name (used to skip apps that IT already installed)
@@ -189,16 +192,38 @@ install_shell() {
   fetch config/p10k.zsh "$HOME/.p10k.zsh"
 }
 
+# Runs a command with nvm loaded. nvm.sh is not written for `set -eu`, so it
+# is sourced in a subshell with those options off.
+with_nvm() {
+  (
+    set +eu
+    export NVM_DIR="$HOME/.nvm"
+    # shellcheck disable=SC1091
+    . "$(brew --prefix nvm)/nvm.sh" || exit 1
+    "$@"
+  )
+}
+
 install_node() {
-  step "Node.js, pnpm and NestJS CLI (via mise)"
-  # Let mise honour .nvmrc / .node-version files found in projects.
-  mise settings set idiomatic_version_file_enable_tools node || warn "could not enable .nvmrc support in mise"
-  mise use --global node@lts pnpm@latest || { warn "mise could not install node/pnpm"; return 0; }
-  if mise exec -- npm ls -g --depth=0 @nestjs/cli >/dev/null 2>&1; then
-    info "already installed: @nestjs/cli"
-  else
-    mise exec -- npm install -g @nestjs/cli || warn "npm install -g @nestjs/cli failed"
-  fi
+  step "Node.js, pnpm and NestJS CLI (via nvm)"
+  mkdir -p "$HOME/.nvm"
+
+  # nvm installs every package listed here into each Node version it installs,
+  # so these commands keep working after switching versions.
+  local pkg defaults_file="$HOME/.nvm/default-packages"
+  touch "$defaults_file"
+  for pkg in $NODE_GLOBAL_PACKAGES; do
+    grep -qxF "$pkg" "$defaults_file" || printf '%s\n' "$pkg" >>"$defaults_file"
+  done
+
+  with_nvm nvm install --lts || { warn "nvm could not install Node.js"; return 0; }
+  with_nvm nvm alias default 'lts/*' >/dev/null || warn "could not set the default Node.js version"
+
+  # Covers the case where this Node version was installed before the list above existed.
+  for pkg in $NODE_GLOBAL_PACKAGES; do
+    if with_nvm npm ls -g --depth=0 "$pkg" >/dev/null 2>&1; then info "already installed: $pkg"
+    else with_nvm npm install -g "$pkg" || warn "npm install -g $pkg failed"; fi
+  done
 }
 
 configure_iterm() {
@@ -391,7 +416,7 @@ verify() {
   step "Verification"
   export PATH="$HOME/.local/bin:${HOMEBREW_PREFIX:-/opt/homebrew}/opt/libpq/bin:$PATH"
   local c v
-  for c in brew git gh mise psql code claude codex; do
+  for c in brew git gh psql code claude codex; do
     if have "$c"; then
       v="$("$c" --version 2>/dev/null | head -1)"
       printf '    \033[32mok\033[0m       %-7s %s\n' "$c" "$v"
@@ -399,8 +424,8 @@ verify() {
       printf '    \033[31mmissing\033[0m  %s\n' "$c"
     fi
   done
-  for c in node pnpm nest; do
-    if v="$(mise exec -- "$c" --version 2>/dev/null | head -1)"; then
+  for c in nvm node pnpm nest; do
+    if v="$(with_nvm "$c" --version 2>/dev/null | head -1)" && [[ -n "$v" ]]; then
       printf '    \033[32mok\033[0m       %-7s %s\n' "$c" "$v"
     else
       printf '    \033[31mmissing\033[0m  %s\n' "$c"
