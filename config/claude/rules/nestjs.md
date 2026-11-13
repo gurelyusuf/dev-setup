@@ -6,69 +6,81 @@ paths:
   - "**/*.guard.ts"
   - "**/*.interceptor.ts"
   - "**/*.filter.ts"
+  - "**/*.pipe.ts"
   - "**/dto/**/*.ts"
   - "**/main.ts"
   - "**/test/**/*.ts"
   - "**/*.spec.ts"
 ---
 
-# NestJS conventions
+# NestJS best practices
 
-Project docs (`CLAUDE.md`, `docs/`) and the existing code win over this file. Match what the repo already does.
+The repo's own docs (`CLAUDE.md`, `docs/`) and existing patterns win over this file. Check the installed `@nestjs/*` version before using an API; look it up in Context7 when unsure.
 
-## Layout
+## Structure
 
-- Feature folders under `src/modules/<feature>/` with layers:
-  `domain/` (entities, enums, errors, interfaces), `infrastructure/` (repositories),
-  `application/` (services), `interface/` (controllers, `dto/`, `dto/responses/`).
-- Cross-cutting code goes in `src/shared/`, `src/core/` (global guards, errors), `src/infrastructure/` (db, http, config).
-- File names are kebab-case: `patient-tag.controller.ts`, `create-patient-tag.dto.ts`.
-- Use relative imports unless the repo already defines path aliases.
+- One feature module per domain (`users/`, `orders/`), each with its controller, service, DTOs and entities. Shared code lives in a `common/` or `shared/` module; don't create cross-feature imports that form cycles.
+- Export only the providers other modules need. Avoid `forwardRef`; a circular dependency means the boundary is wrong.
+- Use `@Global()` only for true app-wide infrastructure (config, logger, database).
+- File names are kebab-case with a role suffix: `create-user.dto.ts`, `users.service.ts`.
 
 ## Layering
 
-- Controller: HTTP only (params, DTOs, decorators, response mapping). No business logic.
-- Service: business rules; throws domain errors; never touches `Repository<T>` directly when a custom repository exists.
-- Repository: a custom class wrapping `@InjectRepository(Entity) private readonly repo: Repository<Entity>`. All queries live here.
-- Inject by class. Avoid `forwardRef`; restructure instead.
+- Controllers handle HTTP only: routing, params, DTOs, status codes. No business logic, no data access.
+- Services hold business logic and are framework-agnostic where practical (no `Request`/`Response` objects).
+- Data access goes through repositories, injected via DI. Don't query the database from controllers.
+- Constructor injection with `private readonly`. Depend on abstractions (an injection token or abstract class) where the implementation may change.
 
-## Controllers
+## HTTP API
 
-- Version in the route: `@Controller('api/v1/<kebab-plural>')`.
-- Set `@HttpCode(HttpStatus.X)` explicitly. `DELETE` returns `204`.
-- Validate ids with `ParseUUIDPipe`.
-- Document every handler with Swagger (`@ApiTags`, `@ApiOperation`, response decorators).
-- Map entities to response DTOs explicitly. Never return entities.
-- Keep the repo's response envelope. Do not invent a new one.
+- Set the prefix and versioning once in `main.ts`: `app.setGlobalPrefix('api')` and `app.enableVersioning({ type: VersioningType.URI })`, then `@Controller({ path: 'users', version: '1' })`. Follow the repo if it already hard-codes prefixes.
+- Plural, kebab-case resource paths. Correct status codes: `201` on create, `204` on delete with no body.
+- Validate route params with built-in pipes (`ParseUUIDPipe`, `ParseIntPipe`).
+- Never return entities. Map to response DTOs so internal fields (password hashes, internal ids) never leak.
+- Document endpoints with `@nestjs/swagger` (`@ApiTags`, `@ApiOperation`, response types). Prefer the Swagger CLI plugin over repetitive `@ApiProperty`.
+- Paginate every list endpoint with a max page size.
 
 ## Validation
 
-- DTOs use `class-validator` and `class-transformer`. The global `ValidationPipe` uses `whitelist`, `forbidNonWhitelisted`, `transform`.
-- Update DTOs: `PartialType(CreateDto)` from `@nestjs/swagger`.
-- Numeric query params: `@Type(() => Number)`.
-- Sorting: whitelist sortable fields; never interpolate user input into column names.
-- Reuse existing shared validators/constants (e.g. sort orders, pagination). Don't copy-paste them into new DTOs.
+- One global `ValidationPipe` with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`. Register it via `APP_PIPE` (testable) or `app.useGlobalPipes`.
+- DTOs are classes with `class-validator` decorators. Use `PartialType`/`PickType`/`OmitType` (from `@nestjs/swagger` when Swagger is used) instead of duplicating fields.
+- Query and param numbers need `@Type(() => Number)` or `transform`. Whitelist sortable/filterable fields.
 
-## Errors and logging
+## Configuration
 
-- Throw domain errors with stable codes (`X_NOT_FOUND`), not built-in `NotFoundException` and friends, when the repo has a domain error system.
-- One global exception filter maps errors to HTTP. Don't catch-and-rethrow without adding information.
-- Logger: `private readonly logger = new Logger(ClassName.name)`. Never log secrets or full request bodies with PII.
+- `ConfigModule.forRoot({ isGlobal: true, ... })` with startup validation: a `validationSchema` (Zod/Joi/Standard Schema) or a `validate()` function. Missing or invalid env fails the boot.
+- Group settings with `registerAs()` namespaces; read them via `ConfigService` (typed, `{ infer: true }`) or the injected namespace.
+- No `process.env` outside config files and `main.ts`. No magic numbers: limits, TTLs and timeouts come from config or named constants.
 
-## Config
+## Errors
 
-- `ConfigModule.forRoot({ isGlobal: true, validate })` with a schema (zod or Joi).
-- Read values via `ConfigService<EnvConfig, true>` and `.get('KEY', { infer: true })`.
-- No `process.env` outside bootstrap/config files. No magic numbers for limits, TTLs or timeouts; put them in env or a named constant.
+- Throw Nest HTTP exceptions (`NotFoundException`, `ConflictException`, ...) or the repo's own domain errors, never raw `Error` for expected cases.
+- Map errors to responses in one global exception filter; keep a consistent error body. Never leak stack traces or SQL errors to clients.
+- Don't catch an error just to rethrow it unchanged. Log 5xx with context, not 4xx noise.
 
-## Async
+## Security
 
-- Await every promise. Intentional fire-and-forget is written `void promise` and must handle its own errors.
-- Scheduled jobs (`@Cron`) must be idempotent.
+- Global auth: register the auth guard with `APP_GUARD` and mark open routes with a `@Public()` decorator, so new routes are protected by default. Authorize with roles/permissions guards.
+- Security headers: `app.useSecurityHeaders()` on Nest >= 12.1, otherwise `helmet`.
+- CORS: `app.enableCors({ origin: <allowed origins from config> })`. Never `origin: '*'` with credentials.
+- Rate limiting with `@nestjs/throttler` (`ThrottlerGuard` via `APP_GUARD`); stricter limits on auth endpoints.
+- Hash passwords with bcrypt/argon2. Secrets only from config.
+
+## Lifecycle and async
+
+- Call `app.enableShutdownHooks()` so connections, queues and jobs close cleanly on SIGTERM. Release resources in `onModuleDestroy`/`onApplicationShutdown`.
+- Await every promise. Intentional fire-and-forget is `void promise` with its own error handling.
+- Scheduled jobs (`@Cron`) and queue consumers must be idempotent.
+- Request-scoped providers are slow and bubble up the scope chain; use them only when necessary.
+
+## Logging
+
+- Use the Nest `Logger` (`new Logger(ClassName.name)`) or the repo's logger (pino/winston). No `console.log`.
+- Structured logs in production. Never log secrets, tokens or PII.
 
 ## Testing
 
-- Tests live in `test/` mirroring `src/`: `test/unit`, `test/integration`, `test/e2e` (`*.e2e-spec.ts`).
-- Unit tests: construct the class directly with typed `jest.fn()` mocks; use `Test.createTestingModule` when DI wiring matters.
-- Shared fixtures in `test/helpers/`.
-- Before finishing: run `lint`, `typecheck` and the relevant tests with the repo's own scripts.
+- Unit test services with `Test.createTestingModule` and mocked providers (`useValue`), or direct construction with typed mocks.
+- E2E tests boot the app (`createNestApplication()`), apply the same global pipes/filters as `main.ts`, and hit it with `supertest`. Close the app in `afterAll`.
+- Test behavior and error paths, not implementation details. Follow the repo's test folder and naming layout.
+- Before finishing: run the repo's `lint`, `typecheck` and test scripts.
