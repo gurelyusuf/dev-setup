@@ -26,7 +26,7 @@ REPO="${SETUP_REPO:-gurelyusuf/dev-setup}"
 # overrides it for local testing.
 BASE_URL="${SETUP_BASE_URL:-}"
 
-FORMULAE="git gh nvm libpq"
+FORMULAE="git gh nvm libpq coreutils"
 
 # npm packages installed globally into every Node.js version.
 NODE_GLOBAL_PACKAGES="pnpm @nestjs/cli"

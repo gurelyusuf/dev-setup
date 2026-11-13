@@ -11,6 +11,7 @@ Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm
 - GitHub CLI (`gh`)
 - nvm
 - PostgreSQL client tools (`psql`, via `libpq`)
+- GNU coreutils (`gls`, `gdate`, `gcp`, ... with a `g` prefix)
 - Node.js LTS
 - pnpm
 - NestJS CLI
