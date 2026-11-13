@@ -1,0 +1,70 @@
+{
+  "model": "opus",
+  "effortLevel": "medium",
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true,
+  "permissions": {
+    "allow": [
+      "Bash(docker start:*)",
+      "Bash(brew list:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo:*)",
+      "Bash(xargs basename:*)",
+      "Bash(docker exec *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Read(//private/tmp/**)",
+      "Bash(xargs kill *)",
+      "Bash(xargs ls *)",
+      "Bash(aws ssm *)",
+      "Bash(aws sts *)",
+      "Bash(aws sso *)",
+      "Read(//Applications/Postgres.app/Contents/**)",
+      "Read(//opt/homebrew/**)",
+      "Bash(aws logs *)",
+      "Bash(xargs cat *)",
+      "Bash(aws cloudfront *)",
+      "Bash(aws wafv2 *)",
+      "Bash(python3 -c ' *)",
+      "Bash(aws configure *)",
+      "Bash(aws route53 *)",
+      "Bash(aws sesv2 *)",
+      "Bash(aws ses *)",
+      "Bash(npx jest *)",
+      "mcp__plugin_context-mode_context-mode",
+      "mcp__context7"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.secrets)"
+    ]
+  },
+  "enabledPlugins": {
+    "context-mode@context-mode": true,
+    "caveman@caveman": true
+  },
+  "extraKnownMarketplaces": {
+    "context-mode": {
+      "source": {
+        "source": "github",
+        "repo": "mksglu/context-mode"
+      }
+    },
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    }
+  }
+}
