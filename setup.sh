@@ -56,6 +56,19 @@ github.vscode-github-actions
 ms-vscode-remote.remote-ssh
 "
 
+# Claude Code files under config/claude/, installed into ~/.claude/.
+CLAUDE_FILES="CLAUDE.md AGENTS.md settings.json rules/nestjs.md rules/typeorm-postgres.md rules/redis.md"
+
+# marketplace source|plugin@marketplace
+CLAUDE_PLUGINS="
+mksglu/context-mode|context-mode@context-mode
+JuliusBrussee/caveman|caveman@caveman
+"
+
+# Skill from cloudflare/security-audit-skill, pinned like everything else here.
+SECURITY_AUDIT_REPO="https://github.com/cloudflare/security-audit-skill.git"
+SECURITY_AUDIT_REF="c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
+
 BACKUP_DIR="$HOME/.dev-setup-backup/$(date +%Y%m%d-%H%M%S)"
 WARNINGS=""
 
@@ -269,6 +282,92 @@ install_agents() {
   have codex && info "codex is installed" || warn "codex not found (cask install may have failed)"
 }
 
+configure_claude() {
+  step "Claude Code config, plugins, MCP servers and skills"
+  local f
+  for f in $CLAUDE_FILES; do
+    fetch "config/claude/$f" "$HOME/.claude/$f"
+  done
+  fetch config/caveman/config.json "$HOME/.config/caveman/config.json"
+  link_codex_agents
+  install_security_audit_skill
+
+  export PATH="$HOME/.local/bin:$PATH"
+  if ! have claude; then
+    warn "claude not found; plugins and MCP servers were not installed"
+    return 0
+  fi
+  install_claude_plugins
+  install_claude_mcp_servers
+}
+
+# Codex reads ~/.codex/AGENTS.md; link it so both agents share one file.
+link_codex_agents() {
+  local link="$HOME/.codex/AGENTS.md" target="$HOME/.claude/AGENTS.md"
+  if [[ -L "$link" && "$(readlink "$link")" == "$target" ]]; then
+    info "already linked: $link"; return 0
+  fi
+  mkdir -p "$HOME/.codex"
+  if [[ -e "$link" || -L "$link" ]]; then
+    mkdir -p "$BACKUP_DIR/.codex"
+    mv "$link" "$BACKUP_DIR/.codex/AGENTS.md"
+    info "backed up existing $link to $BACKUP_DIR/.codex/AGENTS.md"
+  fi
+  ln -s "$target" "$link" && info "linked: $link -> $target"
+}
+
+install_security_audit_skill() {
+  local dest="$HOME/.claude/skills/security-audit" tmp
+  if [[ "$(cat "$dest/.source-ref" 2>/dev/null)" == "$SECURITY_AUDIT_REF" ]]; then
+    info "already installed: security-audit skill"; return 0
+  fi
+  tmp="$(mktemp -d)"
+  if ! { git -C "$tmp" init -q \
+      && git -C "$tmp" fetch -q --depth=1 "$SECURITY_AUDIT_REPO" "$SECURITY_AUDIT_REF" \
+      && git -C "$tmp" checkout -q FETCH_HEAD; }; then
+    rm -rf "$tmp"; warn "could not download the security-audit skill"; return 0
+  fi
+  if [[ -d "$dest" ]]; then
+    mkdir -p "$BACKUP_DIR/.claude/skills"
+    mv "$dest" "$BACKUP_DIR/.claude/skills/security-audit"
+    info "backed up existing security-audit skill to $BACKUP_DIR"
+  fi
+  mkdir -p "$(dirname "$dest")"
+  cp -R "$tmp/skills/security-audit" "$dest"
+  printf '%s\n' "$SECURITY_AUDIT_REF" >"$dest/.source-ref"
+  rm -rf "$tmp"
+  info "installed: security-audit skill"
+}
+
+# Adding a marketplace or installing a plugin that is already there is a no-op.
+# The loop reads a here-string (not a pipe) so warn() runs in this shell;
+# claude gets </dev/null so it cannot consume the loop's input.
+install_claude_plugins() {
+  local entry src plugin
+  while IFS= read -r entry; do
+    [[ -n "$entry" ]] || continue
+    src="${entry%%|*}"; plugin="${entry#*|}"
+    claude plugin marketplace add "$src" </dev/null >/dev/null 2>&1 || warn "could not add plugin marketplace $src"
+    if claude plugin install "$plugin" </dev/null >/dev/null 2>&1; then info "installed: $plugin"
+    else warn "could not install plugin $plugin"; fi
+  done <<<"$CLAUDE_PLUGINS"
+}
+
+# add_mcp <name> <claude mcp add arguments...>; skips servers that already exist.
+add_mcp() {
+  local name="$1"; shift
+  if claude mcp get "$name" </dev/null >/dev/null 2>&1; then info "already configured: $name"; return 0; fi
+  if claude mcp add --scope user "$@" </dev/null >/dev/null 2>&1; then info "added MCP server: $name"
+  else warn "could not add MCP server $name"; fi
+}
+
+install_claude_mcp_servers() {
+  add_mcp context7 --transport http context7 https://mcp.context7.com/mcp
+  add_mcp playwright playwright -- npx @playwright/mcp@latest
+  add_mcp chrome-devtools chrome-devtools -- npx -y chrome-devtools-mcp@latest \
+    --ignoreDefaultChromeArg=--enable-automation --chromeArg=--disable-blink-features=AutomationControlled
+}
+
 configure_git() {
   step "Git identity and SSH key"
   local name email
@@ -465,6 +564,7 @@ main() {
   configure_iterm
   configure_vscode
   install_agents
+  configure_claude
   configure_git
   configure_macos
   verify
