@@ -55,7 +55,7 @@ Files from `config/claude/` go into `~/.claude/`:
 
 Also installed:
 
-- Plugins: [context-mode](https://github.com/mksglu/context-mode) (keeps large tool output out of the context), [caveman](https://github.com/JuliusBrussee/caveman) (terse replies; default mode set in `config/caveman/config.json`)
+- Plugins: [context-mode](https://github.com/mksglu/context-mode) (keeps large tool output out of the context), [caveman](https://github.com/JuliusBrussee/caveman) (terse replies; default mode in `config/caveman/config.json`), [ponytail](https://github.com/DietrichGebert/ponytail) (least new code; `lite` mode in `config/ponytail/config.json`, task board stays local). `AGENTS.md` splits their roles so they don't conflict.
 - MCP servers: Context7 (library docs), Playwright and Chrome DevTools (browser automation)
 - Skill: [security-audit](https://github.com/cloudflare/security-audit-skill), pinned to a commit
 

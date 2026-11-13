@@ -39,7 +39,8 @@
   "model": "opus",
   "enabledPlugins": {
     "context-mode@context-mode": true,
-    "caveman@caveman": true
+    "caveman@caveman": true,
+    "ponytail@ponytail": true
   },
   "extraKnownMarketplaces": {
     "context-mode": {
@@ -53,6 +54,12 @@
         "source": "github",
         "repo": "JuliusBrussee/caveman"
       }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
     }
   },
   "effortLevel": "medium",
@@ -62,6 +69,14 @@
     },
     "claude-opus-5-5": {
       "effortLevel": "high"
+    }
+  },
+  "pluginConfigs": {
+    "ponytail@ponytail": {
+      "options": {
+        "ledger": true,
+        "sendNames": false
+      }
     }
   },
   "tui": "fullscreen",

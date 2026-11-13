@@ -63,6 +63,7 @@ CLAUDE_FILES="CLAUDE.md AGENTS.md settings.json rules/nestjs.md rules/typeorm-po
 CLAUDE_PLUGINS="
 mksglu/context-mode|context-mode@context-mode
 JuliusBrussee/caveman|caveman@caveman
+DietrichGebert/ponytail|ponytail@ponytail
 "
 
 # Skill from cloudflare/security-audit-skill, pinned like everything else here.
@@ -289,6 +290,7 @@ configure_claude() {
     fetch "config/claude/$f" "$HOME/.claude/$f"
   done
   fetch config/caveman/config.json "$HOME/.config/caveman/config.json"
+  fetch config/ponytail/config.json "$HOME/.config/ponytail/config.json"
   link_codex_agents
   install_security_audit_skill
 
