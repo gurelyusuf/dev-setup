@@ -1,2 +1,21 @@
+# macOS
 .DS_Store
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Editors
+.idea/
+*.swp
+*~
+
+# AI agents (personal, never shared)
 **/.claude/settings.local.json
+CLAUDE.local.md
+
+# Local secrets safety net
+.env
+.env.local
+.env.*.local

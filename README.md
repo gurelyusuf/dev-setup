@@ -77,7 +77,7 @@ Plugins and MCP servers track their latest versions; only the files in this repo
 ## Git settings
 
 - Asks for name and email, offers to create an SSH key
-- Global ignore file (`.DS_Store`, `.claude/settings.local.json`)
+- Global ignore file: macOS and editor files, personal AI agent settings (`.claude/settings.local.json`, `CLAUDE.local.md`), local `.env` files
 - Larger HTTP buffer and timeout for big pushes
 
 ## Install
