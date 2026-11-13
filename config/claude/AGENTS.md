@@ -117,6 +117,15 @@ Applies when the repo has other human contributors (check `git log` authors). Fo
 - Never post anything outward (PR comments, issues, chat messages) without approval.
 - No real user or production data in fixtures, seeds or tests.
 
+## Caveman + Ponytail
+
+Both plugins are active; they split the work:
+
+- Caveman controls how replies are written (terse prose). Ponytail controls what code gets written (least new code, reuse first). Neither changes the other's area.
+- End a reply with one terse line of skipped checks or risks only when there are any. That line is a warning, not a recap; omit it when nothing was skipped.
+- Never write `shortcut:` comments in code. Mention a deliberate shortcut and its limit in the reply instead.
+- Ponytail's suggestions for a smaller solution follow rule 7: name the option, let the user pick.
+
 ## Tooling
 
 - Use the package manager that matches the lockfile (`package-lock.json` = npm, `pnpm-lock.yaml` = pnpm). Never mix.
