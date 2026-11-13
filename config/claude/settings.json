@@ -1,17 +1,4 @@
 {
-  "model": "opus",
-  "effortLevel": "medium",
-  "modelSettings": {
-    "claude-opus-5": {
-      "effortLevel": "high"
-    },
-    "claude-opus-5-5": {
-      "effortLevel": "high"
-    }
-  },
-  "tui": "fullscreen",
-  "skipDangerousModePermissionPrompt": true,
-  "agentPushNotifEnabled": true,
   "permissions": {
     "allow": [
       "Bash(docker start:*)",
@@ -49,6 +36,7 @@
       "Read(.secrets)"
     ]
   },
+  "model": "opus",
   "enabledPlugins": {
     "context-mode@context-mode": true,
     "caveman@caveman": true
@@ -66,5 +54,17 @@
         "repo": "JuliusBrussee/caveman"
       }
     }
-  }
+  },
+  "effortLevel": "medium",
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true
 }
