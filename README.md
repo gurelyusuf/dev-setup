@@ -44,6 +44,23 @@ Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm
 - GitHub Actions
 - Remote SSH
 
+## Claude Code setup
+
+Files from `config/claude/` go into `~/.claude/`:
+
+- `AGENTS.md`: instructions for every coding agent (communication, behavior, git, safety, team repos). `~/.codex/AGENTS.md` is a symlink to it, so Codex reads the same file.
+- `CLAUDE.md`: Claude Code-only notes; imports `AGENTS.md` so it also loads in projects with their own `CLAUDE.md`.
+- `rules/`: NestJS, TypeORM + PostgreSQL and Redis rules. Each loads only when Claude opens a matching file.
+- `settings.json`: model, effort, permissions and enabled plugins.
+
+Also installed:
+
+- Plugins: [context-mode](https://github.com/mksglu/context-mode) (keeps large tool output out of the context), [caveman](https://github.com/JuliusBrussee/caveman) (terse replies; default mode set in `config/caveman/config.json`)
+- MCP servers: Context7 (library docs), Playwright and Chrome DevTools (browser automation)
+- Skill: [security-audit](https://github.com/cloudflare/security-audit-skill), pinned to a commit
+
+Plugins and MCP servers track their latest versions; only the files in this repo and the security-audit skill are pinned.
+
 ## macOS settings
 
 - Appearance: dark mode; English interface with Turkey as the region
