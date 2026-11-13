@@ -99,9 +99,12 @@ fetch() {
     if cmp -s "$tmp" "$dest"; then
       rm -f "$tmp"; info "unchanged: $dest"; return 0
     fi
-    mkdir -p "$BACKUP_DIR"
-    cp -p "$dest" "$BACKUP_DIR/$(basename "$dest")"
-    info "backed up existing $(basename "$dest") to $BACKUP_DIR"
+    # Keep the path under $HOME so files with the same name (e.g. the VS Code
+    # and Claude Code settings.json) do not overwrite each other's backup.
+    local backup="$BACKUP_DIR/${dest#"$HOME"/}"
+    mkdir -p "$(dirname "$backup")"
+    cp -p "$dest" "$backup"
+    info "backed up existing $dest to $backup"
   fi
   mv "$tmp" "$dest"
   info "installed: $dest"
