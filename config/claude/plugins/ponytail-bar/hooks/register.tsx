@@ -58,7 +58,7 @@ export const register: Register = on => {
         {s && <Text color="claude">{prettyModel(s.model)}</Text>}
         {s && s.percent !== null && (
           <Text>
-            <Text color="suggestion">Context Window</Text> <Text color={usageColor(s.percent)}>{s.percent}%</Text>
+            <Text color="suggestion">CTX</Text> <Text color={usageColor(s.percent)}>{s.percent}%</Text>
           </Text>
         )}
         <Box flexGrow={1} />

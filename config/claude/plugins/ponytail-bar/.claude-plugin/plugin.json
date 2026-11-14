@@ -1,6 +1,6 @@
 {
   "name": "ponytail-bar",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Band above the prompt with the model, context usage and ponytail Review/Audit buttons",
   "types": "./types/index.d.ts"
 }
