@@ -70,7 +70,7 @@ export const register: Register = on => {
         <Button key="commit" plain onPress={() => run($, 'caveman:caveman-commit')}>
           <Text color="suggestion">Commit</Text>
         </Button>
-        {s?.branch && <Text color="remember">{s.branch}</Text>}
+        {s?.branch && <Text color="merged">{s.branch}</Text>}
       </Box>
     )
   })
