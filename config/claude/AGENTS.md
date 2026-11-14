@@ -1,7 +1,5 @@
 # AGENTS.md
 
-Global instructions for every AI coding agent (Claude Code, Codex, ...).
-Stack-specific rules live in `~/.claude/rules/` and load only for matching files.
 A project's own `CLAUDE.md` / `AGENTS.md` wins over this file when they conflict.
 
 ## Communication
