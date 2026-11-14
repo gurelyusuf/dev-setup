@@ -43,7 +43,8 @@
   "enabledPlugins": {
     "context-mode@context-mode": true,
     "caveman@caveman": true,
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "ponytail-bar@dev-setup": true
   },
   "extraKnownMarketplaces": {
     "context-mode": {
@@ -62,6 +63,12 @@
       "source": {
         "source": "github",
         "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "dev-setup": {
+      "source": {
+        "source": "github",
+        "repo": "gurelyusuf/dev-setup"
       }
     }
   },

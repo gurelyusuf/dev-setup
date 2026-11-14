@@ -66,6 +66,7 @@ CLAUDE_PLUGINS="
 mksglu/context-mode|context-mode@context-mode
 JuliusBrussee/caveman|caveman@caveman
 DietrichGebert/ponytail|ponytail@ponytail
+$REPO|ponytail-bar@dev-setup
 "
 
 # Skill from cloudflare/security-audit-skill, pinned like everything else here.
@@ -325,6 +326,8 @@ configure_claude() {
   merge_kept_keys "$HOME/.claude/settings.json"
   fetch config/caveman/config.json "$HOME/.config/caveman/config.json"
   fetch config/ponytail/config.json "$HOME/.config/ponytail/config.json"
+  # Hide ponytail's band (what `/ponytail band off` does); ponytail-bar replaces it.
+  printf off >"$HOME/.claude/.ponytail-band"
   link_codex_agents
   install_security_audit_skill
 
