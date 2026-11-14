@@ -509,12 +509,18 @@ configure_macos() {
   set_default com.apple.dock wvous-bl-modifier -int 0
   set_default com.apple.dock wvous-br-corner -int 4
   set_default com.apple.dock wvous-br-modifier -int 0
-  # Replace the Dock's app list. Apps that are not installed are left out.
-  defaults write com.apple.dock persistent-apps -array
-  defaults write com.apple.dock persistent-others -array
-  dock_add "/Applications/Google Chrome.app"
-  dock_add "/Applications/iTerm.app"
-  dock_add "/Applications/Visual Studio Code.app"
+  # Replace the Dock's app list on the first run only, so a re-run keeps what
+  # was pinned since. Apps that are not installed are left out.
+  if [[ "$(defaults read com.apple.dock dev-setup-apps-set 2>/dev/null || true)" == "1" ]]; then
+    info "Dock app list already set; left as it is"
+  else
+    defaults write com.apple.dock persistent-apps -array
+    defaults write com.apple.dock persistent-others -array
+    dock_add "/Applications/Google Chrome.app"
+    dock_add "/Applications/iTerm.app"
+    dock_add "/Applications/Visual Studio Code.app"
+    defaults write com.apple.dock dev-setup-apps-set -bool true
+  fi
 
   killall Dock >/dev/null 2>&1 || true
   killall Finder >/dev/null 2>&1 || true

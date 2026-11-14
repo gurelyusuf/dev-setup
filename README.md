@@ -69,7 +69,7 @@ Plugins and MCP servers track their latest versions; only the files in this repo
 - Trackpad: natural scrolling off, pointer speed, two-finger secondary click
 - Windows: double-clicking a title bar fills the screen; no screenshot thumbnail
 - Finder: show file extensions and hidden files, path bar, status bar, folders first, search the current folder, new windows open Desktop, no disks on the desktop, no `.DS_Store` on network and USB drives
-- Dock: size, magnification, hot corners and pinned apps (Chrome, iTerm2, VS Code)
+- Dock: size, magnification, hot corners and pinned apps (Chrome, iTerm2, VS Code; the app list is set on the first run only)
 - Power: display sleeps after 10 minutes on battery, 60 minutes on power adapter
 - Require password immediately after the screen locks
 - Touch ID for `sudo`
