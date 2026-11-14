@@ -513,8 +513,6 @@ configure_macos() {
   defaults write com.apple.dock persistent-apps -array
   defaults write com.apple.dock persistent-others -array
   dock_add "/Applications/Google Chrome.app"
-  dock_add "/Applications/Adobe Photoshop 2025/Adobe Photoshop 2025.app"
-  dock_add "/Applications/Spotify.app"
   dock_add "/Applications/iTerm.app"
   dock_add "/Applications/Visual Studio Code.app"
 
