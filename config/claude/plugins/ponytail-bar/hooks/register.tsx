@@ -63,10 +63,10 @@ export const register: Register = on => {
         )}
         <Box flexGrow={1} />
         <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
-          <Text color="success">✓ Review</Text>
+          <Text color="success">Review</Text>
         </Button>
         <Button key="audit" plain onPress={() => run($, 'ponytail:ponytail-audit')}>
-          <Text color="warning">⚠ Audit</Text>
+          <Text color="warning">Audit</Text>
         </Button>
       </Box>
     )
