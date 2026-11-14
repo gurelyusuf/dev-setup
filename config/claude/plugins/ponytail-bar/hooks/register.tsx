@@ -38,12 +38,19 @@ export const register: Register = on => {
 
     const s = await read($, status)
     const { Box, Button, Text } = $.ui.resolve(e)
+    // As in ponytail's band: bodyColumns counts terminal cells, so other surfaces size the row themselves.
+    const width = e.surface === 'terminal' ? e.props.bodyColumns : undefined
 
     return (
-      <Box flexDirection="row" alignItems="center" gap={2}>
+      <Box flexDirection="row" alignItems="center" gap={2} width={width}>
         {s && <Text dimColor>{s.percent === null ? s.model : `${s.model} · ctx ${s.percent}%`}</Text>}
-        <Button key="review" plain label="Review" onPress={() => run($, 'ponytail:ponytail-review')} />
-        <Button key="audit" plain label="Audit" onPress={() => run($, 'ponytail:ponytail-audit')} />
+        <Box flexGrow={1} />
+        <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
+          <Text color="success">✓ Review</Text>
+        </Button>
+        <Button key="audit" plain onPress={() => run($, 'ponytail:ponytail-audit')}>
+          <Text color="warning">⚠ Audit</Text>
+        </Button>
       </Box>
     )
   })
