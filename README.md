@@ -91,4 +91,4 @@ REF=<commit hash>
 
 `./install-command.sh` prints this command for the current commit.
 
-The script is safe to re-run and backs up any file it replaces to `~/.dev-setup-backup/`.
+The script is safe to re-run and backs up any file it replaces to `~/.dev-setup-backup/`. A re-run puts the repo version of every config file back, so settings you changed in an app since (VS Code, iTerm2) move to the backup. `~/.claude/settings.json` is the exception: keys that only your machine has are kept, and keys that are also in the repo file take the repo value.

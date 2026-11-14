@@ -124,6 +124,37 @@ fetch() {
   info "installed: $dest"
 }
 
+# merge_kept_keys <json file that fetch just replaced>
+# Puts back the keys that only the old file had. Claude Code writes its own
+# keys into settings.json (hooks, status line, extra plugins); replacing the
+# file would drop them. Keys in the repo file win, and lists are not merged.
+merge_kept_keys() {
+  local dest="$1" backup="$BACKUP_DIR/${1#"$HOME"/}"
+  [[ -f "$backup" ]] || return 0
+  python3 - "$backup" "$dest" <<'PY' && info "kept machine-only keys: $dest" \
+    || warn "could not merge the old keys into $dest; the old file is in $backup"
+import json, os, sys
+
+def merge(old, new):
+    for key, value in old.items():
+        if key not in new:
+            new[key] = value
+        elif isinstance(value, dict) and isinstance(new[key], dict):
+            merge(value, new[key])
+    return new
+
+old_path, new_path = sys.argv[1:3]
+with open(old_path) as f:
+    old = json.load(f)
+with open(new_path) as f:
+    new = json.load(f)
+with open(new_path + ".tmp", "w") as f:
+    json.dump(merge(old, new), f, indent=2)
+    f.write("\n")
+os.replace(new_path + ".tmp", new_path)
+PY
+}
+
 clone_once() { # clone_once <repo url> <destination>
   if [[ -d "$2" ]]; then info "already present: $(basename "$2")"; return 0; fi
   git clone --depth=1 --quiet "$1" "$2" && info "cloned: $(basename "$2")"
@@ -289,6 +320,7 @@ configure_claude() {
   for f in $CLAUDE_FILES; do
     fetch "config/claude/$f" "$HOME/.claude/$f"
   done
+  merge_kept_keys "$HOME/.claude/settings.json"
   fetch config/caveman/config.json "$HOME/.config/caveman/config.json"
   fetch config/ponytail/config.json "$HOME/.config/ponytail/config.json"
   link_codex_agents
