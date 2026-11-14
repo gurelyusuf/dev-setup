@@ -24,11 +24,11 @@ const refresh = async ($: EngineInterface) => {
   await update($, status, () => next)
 }
 
-// Same command names ponytail's own band runs.
+// Plugin skills run by their namespaced names, as ponytail's own band runs them.
 const run = ($: EngineInterface, command: string) =>
   $.command
     .run({ command, args: '' })
-    .catch(() => $.ui.toast(`/${command} could not run: is the ponytail plugin enabled?`))
+    .catch(() => $.ui.toast(`/${command} could not run: is its plugin enabled?`))
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -56,17 +56,16 @@ export const register: Register = on => {
     return (
       <Box flexDirection="row" alignItems="center" gap={2} width={width}>
         {s && <Text color="claude">{prettyModel(s.model)}</Text>}
-        {s && s.percent !== null && (
-          <Text>
-            <Text color="suggestion">CTX</Text> <Text color={usageColor(s.percent)}>{s.percent}%</Text>
-          </Text>
-        )}
+        {s && s.percent !== null && <Text color={usageColor(s.percent)}>{s.percent}%</Text>}
         <Box flexGrow={1} />
         <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
           <Text color="success">Review</Text>
         </Button>
         <Button key="audit" plain onPress={() => run($, 'ponytail:ponytail-audit')}>
           <Text color="warning">Audit</Text>
+        </Button>
+        <Button key="commit" plain onPress={() => run($, 'caveman:caveman-commit')}>
+          <Text color="suggestion">Commit</Text>
         </Button>
       </Box>
     )
