@@ -1,5 +1,5 @@
 {
   "name": "dev-setup",
   "owner": { "name": "gurelyusuf" },
-  "plugins": [{ "name": "ponytail-bar", "source": "./config/claude/plugins/ponytail-bar" }]
+  "plugins": [{ "name": "dev-bar", "source": "./config/claude/plugins/dev-bar" }]
 }

@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Status } from '../types'
 
-const status = atom({ plugin: 'ponytail-bar', key: 'status' } as const, null)
+const status = atom({ plugin: 'dev-bar', key: 'status' } as const, null)
 
 // `claude-opus-5-5[1m]` -> `Opus 5.5 (1M)`; anything else (an alias, another provider's id) as given.
 export const prettyModel = (id: string) => {

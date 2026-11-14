@@ -44,7 +44,7 @@
     "context-mode@context-mode": true,
     "caveman@caveman": true,
     "ponytail@ponytail": true,
-    "ponytail-bar@dev-setup": true
+    "dev-bar@dev-setup": true
   },
   "extraKnownMarketplaces": {
     "context-mode": {
