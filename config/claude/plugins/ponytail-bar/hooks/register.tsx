@@ -5,6 +5,18 @@ import type { Status } from '../types'
 
 const status = atom({ plugin: 'ponytail-bar', key: 'status' } as const, null)
 
+// `claude-opus-5-5[1m]` -> `Opus 5.5 (1M)`; anything else (an alias, another provider's id) as given.
+export const prettyModel = (id: string) => {
+  const m = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?(\[1m\])?$/.exec(id)
+  if (!m) {
+    return id
+  }
+  const [, family = '', major, minor, long] = m
+  return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ''}${long ? ' (1M)' : ''}`
+}
+
+const usageColor = (percent: number) => (percent >= 80 ? 'error' : percent >= 50 ? 'warning' : 'success')
+
 const refresh = async ($: EngineInterface) => {
   const model = await $.session.model()
   const { percent } = (await $.session.usage()).context
@@ -43,7 +55,12 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="row" alignItems="center" gap={2} width={width}>
-        {s && <Text dimColor>{s.percent === null ? s.model : `${s.model} · ctx ${s.percent}%`}</Text>}
+        {s && <Text color="claude">{prettyModel(s.model)}</Text>}
+        {s && s.percent !== null && (
+          <Text>
+            <Text color="suggestion">Context Window</Text> <Text color={usageColor(s.percent)}>{s.percent}%</Text>
+          </Text>
+        )}
         <Box flexGrow={1} />
         <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
           <Text color="success">✓ Review</Text>
