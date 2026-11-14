@@ -91,4 +91,12 @@ REF=<commit hash>
 
 `./install-command.sh` prints this command for the current commit.
 
+To run one step only, add its name after the hash (the names are the functions `main` calls at the bottom of `setup.sh`). From a local checkout, for example after editing the Claude Code config:
+
+```bash
+SETUP_BASE_URL="file://$PWD" ./setup.sh local configure_claude
+```
+
+`./test.sh` tests the helpers that replace files, against a temporary home folder.
+
 The script is safe to re-run and backs up any file it replaces to `~/.dev-setup-backup/`. A re-run puts the repo version of every config file back, so settings you changed in an app since (VS Code, iTerm2) move to the backup. `~/.claude/settings.json` is the exception: keys that only your machine has are kept, and keys that are also in the repo file take the repo value.

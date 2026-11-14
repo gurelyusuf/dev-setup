@@ -14,6 +14,8 @@
 # this file downloads config/ from the very same commit.
 #
 # Safe to re-run: every step checks whether its work is already done.
+# A step name after the hash runs that step only (the names are the functions
+# called in main at the bottom), e.g. `setup.sh "$REF" configure_claude`.
 # Written for the stock macOS bash (3.2); avoid bash 4+ features.
 
 set -euo pipefail
@@ -595,6 +597,12 @@ main() {
   FAILED_CASKS="$(mktemp)"
   trap 'rm -f "$FAILED_CASKS"' EXIT
   preflight
+  # A second argument runs that one step only, e.g. configure_claude.
+  if [[ -n "${2:-}" ]]; then
+    declare -F "$2" >/dev/null || die "Unknown step: $2"
+    "$2"
+    return
+  fi
   install_homebrew
   install_packages
   install_shell
