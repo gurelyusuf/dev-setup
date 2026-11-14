@@ -20,7 +20,10 @@ const usageColor = (percent: number) => (percent >= 80 ? 'error' : percent >= 50
 const refresh = async ($: EngineInterface) => {
   const model = await $.session.model()
   const { percent } = (await $.session.usage()).context
-  const next: Status = { model, percent: percent ?? null }
+  // Outside a repo git exits non-zero; on a detached HEAD it prints nothing. Both show no branch.
+  const git = await $.process.run(['git', 'branch', '--show-current'])
+  const branch = git.exitCode === 0 ? git.stdout.trim() || null : null
+  const next: Status = { model, percent: percent ?? null, branch }
   await update($, status, () => next)
 }
 
@@ -67,6 +70,7 @@ export const register: Register = on => {
         <Button key="commit" plain onPress={() => run($, 'caveman:caveman-commit')}>
           <Text color="suggestion">Commit</Text>
         </Button>
+        {s?.branch && <Text color="remember">{s.branch}</Text>}
       </Box>
     )
   })
