@@ -1,4 +1,10 @@
-export type Status = { model: string; percent: number | null; branch: string | null }
+export type Status = {
+  model: string
+  tokens: number | null
+  window: number
+  percent: number | null
+  branch: string | null
+}
 
 declare module 'claude-code' {
   interface PluginState {

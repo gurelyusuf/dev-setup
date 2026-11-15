@@ -15,15 +15,19 @@ export const prettyModel = (id: string) => {
   return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ''}${long ? ' (1M)' : ''}`
 }
 
+// 45210 -> `45k`, 1000000 -> `1M`, 1250000 -> `1.3M`.
+export const formatTokens = (n: number) =>
+  n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}M` : `${Math.round(n / 1000)}k`
+
 const usageColor = (percent: number) => (percent >= 80 ? 'error' : percent >= 50 ? 'warning' : 'success')
 
 const refresh = async ($: EngineInterface) => {
   const model = await $.session.model()
-  const { percent } = (await $.session.usage()).context
+  const { tokens, window, percent } = (await $.session.usage()).context
   // Outside a repo git exits non-zero; on a detached HEAD it prints nothing. Both show no branch.
   const git = await $.process.run(['git', 'branch', '--show-current'])
   const branch = git.exitCode === 0 ? git.stdout.trim() || null : null
-  const next: Status = { model, percent: percent ?? null, branch }
+  const next: Status = { model, tokens: tokens ?? null, window, percent: percent ?? null, branch }
   await update($, status, () => next)
 }
 
@@ -59,7 +63,11 @@ export const register: Register = on => {
     return (
       <Box flexDirection="row" alignItems="center" gap={2} width={width}>
         {s && <Text color="claude">{prettyModel(s.model)}</Text>}
-        {s && s.percent !== null && <Text color={usageColor(s.percent)}>{s.percent}%</Text>}
+        {s && s.tokens != null && s.percent !== null && (
+          <Text color={usageColor(s.percent)}>
+            {formatTokens(s.tokens)} / {formatTokens(s.window)}
+          </Text>
+        )}
         <Box flexGrow={1} />
         <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
           <Text color="success">Review</Text>
