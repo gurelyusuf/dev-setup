@@ -15,9 +15,9 @@ export const prettyModel = (id: string) => {
   return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ''}${long ? ' (1M)' : ''}`
 }
 
-// 45210 -> `45k`, 1000000 -> `1M`, 1250000 -> `1.3M`.
+// 45210 -> `45k`, 1000000 -> `1M`, 1250000 -> `1.3M`. From 999500 on it is `1M`, not `1000k`.
 export const formatTokens = (n: number) =>
-  n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}M` : `${Math.round(n / 1000)}k`
+  n >= 999_500 ? `${+(n / 1_000_000).toFixed(1)}M` : `${Math.round(n / 1000)}k`
 
 const usageColor = (percent: number) => (percent >= 80 ? 'error' : percent >= 50 ? 'warning' : 'success')
 

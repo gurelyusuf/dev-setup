@@ -13,6 +13,8 @@ test('prettyModel turns Claude model ids into display names', () => {
 test('formatTokens shortens token counts', () => {
   expect(formatTokens(45_210)).toBe('45k')
   expect(formatTokens(200_000)).toBe('200k')
+  expect(formatTokens(999_499)).toBe('999k')
+  expect(formatTokens(999_500)).toBe('1M')
   expect(formatTokens(1_000_000)).toBe('1M')
   expect(formatTokens(1_250_000)).toBe('1.3M')
 })
