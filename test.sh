@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Tests for the setup.sh helpers that replace files in the home folder.
-# Runs against a temporary HOME, so nothing on this machine changes.
+# Tests for the dev-bar plugin and for the setup.sh helpers that replace files
+# in the home folder. The helpers run against a temporary HOME, so nothing on
+# this machine changes.
 #
 #   ./test.sh
 
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Before HOME changes: claude runs with the real home folder.
+claude plugin test config/claude/plugins/dev-bar
 
 tmp_home="$(mktemp -d)"
 trap 'rm -rf "$tmp_home"' EXIT
