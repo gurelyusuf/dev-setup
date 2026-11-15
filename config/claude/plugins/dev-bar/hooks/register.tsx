@@ -80,10 +80,6 @@ export const register: Register = on => {
         <Button key="audit" plain onPress={() => run($, 'ponytail:ponytail-audit')}>
           <Text color="warning">Audit</Text>
         </Button>
-        {dot}
-        <Button key="commit" plain onPress={() => run($, 'caveman:caveman-commit')}>
-          <Text color="suggestion">Commit</Text>
-        </Button>
         {s?.branch && dot}
         {s?.branch && <Text color="merged">{s.branch}</Text>}
       </Box>
