@@ -37,6 +37,12 @@ const run = ($: EngineInterface, command: string) =>
     .run({ command, args: '' })
     .catch(() => $.ui.toast(`/${command} could not run: is its plugin enabled?`))
 
+const CHECK_PROMPT =
+  "Run this repository's lint, typecheck and test scripts and report each result."
+
+const check = ($: EngineInterface) =>
+  $.prompt.submit({ text: CHECK_PROMPT }).catch(() => $.ui.toast('Check could not be sent'))
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
@@ -73,12 +79,20 @@ export const register: Register = on => {
           </Text>
         )}
         <Box flexGrow={1} />
+        <Button key="check" plain onPress={() => check($)}>
+          <Text color="suggestion">Check</Text>
+        </Button>
+        {dot}
         <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
           <Text color="success">Review</Text>
         </Button>
         {dot}
         <Button key="audit" plain onPress={() => run($, 'ponytail:ponytail-audit')}>
           <Text color="warning">Audit</Text>
+        </Button>
+        {dot}
+        <Button key="security" plain onPress={() => run($, 'security-audit')}>
+          <Text color="error">Security</Text>
         </Button>
         {s?.branch && dot}
         {s?.branch && <Text color="merged">{s.branch}</Text>}
