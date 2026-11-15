@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-repo="$(sed -n 's/^REPO="\${SETUP_REPO:-\(.*\)}"$/\1/p' setup.sh)"
+repo="$(sed -n 's/^REPO="\(.*\)"$/\1/p' setup.sh)"
 [[ -n "$repo" ]] || { echo "Could not read REPO from setup.sh" >&2; exit 1; }
 
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit your changes first." >&2; exit 1; }

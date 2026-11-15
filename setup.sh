@@ -22,7 +22,7 @@ set -euo pipefail
 
 # GitHub repository (owner/name) that hosts this script and config/.
 # It must be public: raw.githubusercontent.com serves private repos only with a token.
-REPO="${SETUP_REPO:-gurelyusuf/dev-setup}"
+REPO="gurelyusuf/dev-setup"
 
 # Built in preflight() from the commit hash argument. SETUP_BASE_URL=file:///path
 # overrides it for local testing.
