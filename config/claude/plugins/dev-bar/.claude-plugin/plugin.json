@@ -1,6 +1,6 @@
 {
   "name": "dev-bar",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Band above the prompt with the model, context usage, git branch and Check, Review, Audit and Security buttons",
   "types": "./types/index.d.ts"
 }

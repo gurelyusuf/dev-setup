@@ -35,7 +35,7 @@ const refresh = async ($: EngineInterface) => {
 const run = ($: EngineInterface, command: string) =>
   $.command
     .run({ command, args: '' })
-    .catch(() => $.ui.toast(`/${command} could not run: is its plugin enabled?`))
+    .catch(() => $.ui.toast(`/${command} could not run: is it installed?`))
 
 const CHECK_PROMPT =
   "Run this repository's lint, typecheck and test scripts and report each result."
