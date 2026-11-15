@@ -363,7 +363,8 @@ install_security_audit_skill() {
   tmp="$(mktemp -d)"
   if ! { git -C "$tmp" init -q \
       && git -C "$tmp" fetch -q --depth=1 "$SECURITY_AUDIT_REPO" "$SECURITY_AUDIT_REF" \
-      && git -C "$tmp" checkout -q FETCH_HEAD; }; then
+      && git -C "$tmp" checkout -q FETCH_HEAD \
+      && [[ -d "$tmp/skills/security-audit" ]]; }; then
     rm -rf "$tmp"; warn "could not download the security-audit skill"; return 0
   fi
   if [[ -d "$dest" ]]; then

@@ -48,4 +48,15 @@ for plugin in repo["enabledPlugins"]:
     assert merged["enabledPlugins"][plugin] is True, "repo plugin missing: " + plugin
 PY
 
+# install_security_audit_skill keeps the installed skill when the download has no skill folder.
+skill="$HOME/.claude/skills/security-audit"
+mkdir -p "$skill"
+echo "old skill" >"$skill/SKILL.md"
+SECURITY_AUDIT_REPO="$HOME/empty-skill-repo"
+git init -q "$SECURITY_AUDIT_REPO"
+git -C "$SECURITY_AUDIT_REPO" -c user.name=test -c user.email=test@example.com commit -q --allow-empty -m empty
+SECURITY_AUDIT_REF="$(git -C "$SECURITY_AUDIT_REPO" rev-parse HEAD)"
+install_security_audit_skill >/dev/null || fail "install_security_audit_skill failed on a download without the skill"
+[[ "$(cat "$skill/SKILL.md" 2>/dev/null)" == "old skill" ]] || fail "install_security_audit_skill removed the installed skill"
+
 echo "ok"
