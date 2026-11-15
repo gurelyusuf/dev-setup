@@ -60,24 +60,31 @@ export const register: Register = on => {
     // As in ponytail's band: bodyColumns counts terminal cells, so other surfaces size the row themselves.
     const width = e.surface === 'terminal' ? e.props.bodyColumns : undefined
 
+    const hasContext = s !== null && s.tokens != null && s.percent !== null
+    const dot = <Text dimColor>·</Text>
+
     return (
-      <Box flexDirection="row" alignItems="center" gap={2} width={width}>
+      <Box flexDirection="row" alignItems="center" gap={1} width={width}>
         {s && <Text color="claude">{prettyModel(s.model)}</Text>}
-        {s && s.tokens != null && s.percent !== null && (
-          <Text color={usageColor(s.percent)}>
-            {formatTokens(s.tokens)} / {formatTokens(s.window)}
+        {hasContext && dot}
+        {hasContext && (
+          <Text color={usageColor(s.percent!)}>
+            {formatTokens(s.tokens!)} / {formatTokens(s.window)}
           </Text>
         )}
         <Box flexGrow={1} />
         <Button key="review" plain onPress={() => run($, 'ponytail:ponytail-review')}>
           <Text color="success">Review</Text>
         </Button>
+        {dot}
         <Button key="audit" plain onPress={() => run($, 'ponytail:ponytail-audit')}>
           <Text color="warning">Audit</Text>
         </Button>
+        {dot}
         <Button key="commit" plain onPress={() => run($, 'caveman:caveman-commit')}>
           <Text color="suggestion">Commit</Text>
         </Button>
+        {s?.branch && dot}
         {s?.branch && <Text color="merged">{s.branch}</Text>}
       </Box>
     )
