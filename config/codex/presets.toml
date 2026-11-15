@@ -1,0 +1,17 @@
+# dev-bar's buttons for Codex: open /presets, then press the digit.
+
+[tui.presets.1]
+label = "Check"
+input = "Run this repository's lint, typecheck and test scripts and report each result."
+
+[tui.presets.2]
+label = "Review"
+input = "$ponytail:ponytail-review"
+
+[tui.presets.3]
+label = "Audit"
+input = "$ponytail:ponytail-audit"
+
+[tui.presets.4]
+label = "Security"
+input = "$security-audit"

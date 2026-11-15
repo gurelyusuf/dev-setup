@@ -92,6 +92,16 @@ REF=<commit hash>
 
 `./install-command.sh` prints this command for the current commit.
 
+## Codex setup
+
+Codex has no plugin UI, so `dev-bar` there is built from Codex's own settings in `~/.codex/config.toml`:
+
+- Status line: model, context usage (as a percentage) and git branch. It replaces a status line you set yourself.
+- Presets from `config/codex/presets.toml` for the four buttons: open `/presets`, then press `1` Check, `2` Review, `3` Audit or `4` Security. Presets you already have are left alone.
+- The ponytail plugin (Review and Audit call its skills) and a link to the security-audit skill in `~/.agents/skills`, where Codex looks for skills.
+
+Every other key in `config.toml` is kept, and the old file goes to the backup folder. Trust ponytail's two hooks once in Codex under `/hooks`.
+
 To run one step only, add its name after the hash (the names are the functions `main` calls at the bottom of `setup.sh`). From a local checkout, for example after editing the Claude Code config:
 
 ```bash

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tests for the dev-bar plugin and for the setup.sh helpers that replace files
-# in the home folder. The helpers run against a temporary HOME, so nothing on
+# Tests for the dev-bar plugin and for the setup.sh helpers that replace or edit
+# files in the home folder. The helpers run against a temporary HOME, so nothing on
 # this machine changes.
 #
 #   ./test.sh
@@ -62,5 +62,41 @@ git -C "$SECURITY_AUDIT_REPO" -c user.name=test -c user.email=test@example.com c
 SECURITY_AUDIT_REF="$(git -C "$SECURITY_AUDIT_REPO" rev-parse HEAD)"
 install_security_audit_skill >/dev/null || fail "install_security_audit_skill failed on a download without the skill"
 [[ "$(cat "$skill/SKILL.md" 2>/dev/null)" == "old skill" ]] || fail "install_security_audit_skill removed the installed skill"
+
+# configure_codex_tui creates the config, then on a re-run changes nothing.
+codex_config="$HOME/.codex/config.toml"
+rm -rf "$BACKUP_DIR"
+configure_codex_tui >/dev/null
+configure_codex_tui >/dev/null
+[[ ! -e "$BACKUP_DIR/.codex/config.toml" ]] || fail "configure_codex_tui rewrote an unchanged config"
+
+# configure_codex_tui replaces the status line and keeps every other key.
+printf 'model = "mine"\n\n[tui]\nstatus_line = ["current-dir"]\nstatus_line_use_colors = true\n\n[notice]\nhide = true\n' >"$codex_config"
+configure_codex_tui >/dev/null
+configure_codex_tui >/dev/null
+grep -q 'status_line = \["current-dir"\]' "$BACKUP_DIR/.codex/config.toml" || fail "configure_codex_tui did not back up the old config"
+python3 - "$codex_config" <<'PY' || fail "configure_codex_tui produced the wrong config"
+import sys, tomllib
+
+with open(sys.argv[1], "rb") as f:
+    config = tomllib.load(f)
+assert config["model"] == "mine", "top-level key was dropped"
+assert config["notice"]["hide"] is True, "another table was dropped"
+assert config["tui"]["status_line_use_colors"] is True, "another tui key was dropped"
+assert config["tui"]["status_line"] == ["model-with-reasoning", "context-used", "git-branch"], "status line was not set"
+assert [config["tui"]["presets"][n]["label"] for n in "1234"] == ["Check", "Review", "Audit", "Security"], "presets are wrong"
+PY
+
+# configure_codex_tui adds the status line to a [tui] table that has none and keeps existing presets.
+printf '[tui]\nstatus_line_use_colors = true\n\n[tui.presets.1]\ninput = "mine"\n' >"$codex_config"
+configure_codex_tui >/dev/null
+python3 - "$codex_config" <<'PY' || fail "configure_codex_tui broke a config with its own presets"
+import sys, tomllib
+
+with open(sys.argv[1], "rb") as f:
+    tui = tomllib.load(f)["tui"]
+assert tui["status_line"] == ["model-with-reasoning", "context-used", "git-branch"], "status line was not added"
+assert tui["presets"] == {"1": {"input": "mine"}}, "existing presets were changed"
+PY
 
 echo "ok"

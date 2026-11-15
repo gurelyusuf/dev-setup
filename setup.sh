@@ -73,6 +73,9 @@ $REPO|dev-bar@dev-setup
 SECURITY_AUDIT_REPO="https://github.com/cloudflare/security-audit-skill.git"
 SECURITY_AUDIT_REF="c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
 
+# dev-bar's model, context usage and git branch, as Codex status line items.
+CODEX_STATUS_LINE='status_line = ["model-with-reasoning", "context-used", "git-branch"]'
+
 BACKUP_DIR="$HOME/.dev-setup-backup/$(date +%Y%m%d-%H%M%S)"
 WARNINGS=""
 
@@ -379,6 +382,71 @@ install_security_audit_skill() {
   info "installed: security-audit skill"
 }
 
+# Codex has no plugin UI, so dev-bar there is Codex's own status line plus
+# presets for the four buttons, with the plugin and skill the presets call.
+configure_codex() {
+  step "Codex status line, presets, plugins and skills"
+  configure_codex_tui
+  link_codex_security_audit
+  if ! have codex; then
+    warn "codex not found; its ponytail plugin was not installed"
+    return 0
+  fi
+  codex plugin marketplace add DietrichGebert/ponytail </dev/null >/dev/null 2>&1 \
+    || warn "could not add the Codex plugin marketplace DietrichGebert/ponytail"
+  if codex plugin add ponytail@ponytail </dev/null >/dev/null 2>&1; then info "installed: ponytail@ponytail (Codex)"
+  else warn "could not install the Codex plugin ponytail@ponytail"; fi
+}
+
+# Codex keeps its own keys in config.toml (model, trusted projects, plugins),
+# so the file is edited in place: the status line is set, and the presets are
+# added unless the file already has some.
+configure_codex_tui() {
+  local dest="$HOME/.codex/config.toml" tmp
+  tmp="$(mktemp -d)"
+  fetch config/codex/presets.toml "$tmp/presets.toml" >/dev/null
+  mkdir -p "$HOME/.codex"
+  touch "$dest"
+  python3 - "$dest" "$tmp/presets.toml" "$CODEX_STATUS_LINE" "$BACKUP_DIR/.codex/config.toml" <<'PY' \
+    && info "status line and presets set: $dest" || warn "could not edit $dest"
+import os, re, shutil, sys
+
+dest, presets, status_line, backup = sys.argv[1:5]
+with open(dest) as f:
+    old = f.read()
+new = old
+if new and not new.endswith("\n"):
+    new += "\n"
+if re.search(r"^status_line\s*=.*$", new, re.M):
+    new = re.sub(r"^status_line\s*=.*$", lambda _: status_line, new, count=1, flags=re.M)
+elif re.search(r"^\[tui\]$", new, re.M):
+    new = re.sub(r"^\[tui\]$", lambda m: m.group() + "\n" + status_line, new, count=1, flags=re.M)
+else:
+    new += "\n[tui]\n" + status_line + "\n"
+if "[tui.presets" not in new:
+    with open(presets) as f:
+        new += "\n" + f.read()
+if new != old:
+    if old:
+        os.makedirs(os.path.dirname(backup), exist_ok=True)
+        shutil.copy2(dest, backup)
+    with open(dest + ".tmp", "w") as f:
+        f.write(new)
+    os.replace(dest + ".tmp", dest)
+PY
+  rm -rf "$tmp"
+}
+
+# Codex reads user skills from ~/.agents/skills; link the Claude copy there.
+link_codex_security_audit() {
+  local link="$HOME/.agents/skills/security-audit" target="$HOME/.claude/skills/security-audit"
+  if [[ -e "$link" ]]; then info "already present: $link"; return 0; fi
+  # No Claude copy means its download failed, which was already warned about.
+  [[ -d "$target" ]] || return 0
+  mkdir -p "$(dirname "$link")"
+  ln -s "$target" "$link" && info "linked: $link -> $target"
+}
+
 # Adding a marketplace or installing a plugin that is already there is a no-op.
 # The loop reads a here-string (not a pipe) so warn() runs in this shell;
 # claude gets </dev/null so it cannot consume the loop's input.
@@ -593,6 +661,7 @@ Left for you to do by hand:
      settings take effect.
   6. Make Chrome the default browser: System Settings > Desktop & Dock >
      Default web browser.
+  7. In Codex, open /hooks and trust ponytail's two hooks.
 EOF
 }
 
@@ -615,6 +684,7 @@ main() {
   configure_vscode
   install_agents
   configure_claude
+  configure_codex
   configure_git
   configure_macos
   verify
