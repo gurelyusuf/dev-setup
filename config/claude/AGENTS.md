@@ -103,15 +103,15 @@ Keep a plain log of finished work in `~/Desktop/daily-done.md`, so the user can 
 - When: right after finishing a task that changed something (code, config, docs, a setup step). Skip questions, read-only investigation and unfinished work.
 - Rotate first: the file's heading holds its date. If that date is not today, move the file to `~/Desktop/daily-done-archive/<DD-MM-YYYY>-daily-done.md` (the heading's date; create the folder if missing), then create a new `daily-done.md` for today.
 - Append one row with a shell append (`>>`); never rewrite or reorder existing rows, another session may be writing too.
-- Columns: `Time` is local 24h `HH:MM`. `Where` is the repo name, or the folder name outside a repo. `Topic` is a few words. `Done` is one short sentence in plain words.
-- This file is written in English too.
+- Columns: `Saat` is local 24h `HH:MM`. `Yer` is the repo name, or the folder name outside a repo. `Konu` is a few words. `Yapılan` is one short sentence in plain words.
+- Write the rows in Turkish. This file is the one exception to the persisted-in-English rule.
 
 ```markdown
 # Daily Done - 15-11-2026
 
-| Time | Where | Topic | Done |
+| Saat | Yer | Konu | Yapılan |
 | --- | --- | --- | --- |
-| 14:32 | dev-setup | Daily done log | Added the daily-done rule to AGENTS.md. |
+| 14:32 | dev-setup | Daily done logu | AGENTS.md'ye daily-done kuralı eklendi. |
 ```
 
 ## Caveman + Ponytail
