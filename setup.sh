@@ -564,7 +564,7 @@ verify() {
   local c v
   for c in brew git gh psql code claude codex; do
     if have "$c"; then
-      v="$("$c" --version 2>/dev/null | head -1)"
+      v="$("$c" --version 2>/dev/null | head -1)" || true
       printf '    \033[32mok\033[0m       %-7s %s\n' "$c" "$v"
     else
       printf '    \033[31mmissing\033[0m  %s\n' "$c"
