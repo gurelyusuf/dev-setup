@@ -48,7 +48,7 @@ Sets up a new Mac for Node.js / NestJS / PostgreSQL development: Homebrew, iTerm
 
 Files from `config/claude/` go into `~/.claude/`:
 
-- `AGENTS.md`: instructions for every coding agent (communication, behavior, git, safety, team repos). `~/.codex/AGENTS.md` is a symlink to it, so Codex reads the same file.
+- `AGENTS.md`: instructions for every coding agent (communication, behavior, git, safety, team repos, the daily done log on the Desktop). `~/.codex/AGENTS.md` is a symlink to it, so Codex reads the same file.
 - `CLAUDE.md`: Claude Code-only notes; imports `AGENTS.md` so it also loads in projects with their own `CLAUDE.md`.
 - `rules/`: NestJS, TypeORM + PostgreSQL and Redis rules. Each loads only when Claude opens a matching file.
 - `settings.json`: model, effort, permissions and enabled plugins.

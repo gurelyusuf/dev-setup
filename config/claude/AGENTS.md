@@ -96,6 +96,24 @@ Applies when the repo has other human contributors (check `git log` authors). Fo
 - Never post anything outward (PR comments, issues, chat messages) without approval.
 - No real user or production data in fixtures, seeds or tests.
 
+## Daily done log
+
+Keep a plain log of finished work in `~/Desktop/daily-done.md`, so the user can open it at the end of the day and see what got done. It is not a commit log: one row per finished task, not per commit.
+
+- When: right after finishing a task that changed something (code, config, docs, a setup step). Skip questions, read-only investigation and unfinished work.
+- Rotate first: the file's heading holds its date. If that date is not today, move the file to `~/Desktop/daily-done-archive/<DD-MM-YYYY>-daily-done.md` (the heading's date; create the folder if missing), then create a new `daily-done.md` for today.
+- Append one row with a shell append (`>>`); never rewrite or reorder existing rows, another session may be writing too.
+- Columns: `Time` is local 24h `HH:MM`. `Where` is the repo name, or the folder name outside a repo. `Topic` is a few words. `Done` is one short sentence in plain words.
+- This file is written in English too.
+
+```markdown
+# Daily Done - 15-11-2026
+
+| Time | Where | Topic | Done |
+| --- | --- | --- | --- |
+| 14:32 | dev-setup | Daily done log | Added the daily-done rule to AGENTS.md. |
+```
+
 ## Caveman + Ponytail
 
 Both plugins are active; they split the work:
