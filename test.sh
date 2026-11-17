@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tests for the dev-bar and dev-guard plugins and for the setup.sh helpers that
-# replace or edit files in the home folder. The helpers run against a temporary HOME,
+# Tests for the dev-bar and dev-guard plugins, for the setup.sh helpers that
+# replace or edit files in the home folder, and for ai-setup.sh. The helpers run against a temporary HOME,
 # so nothing on this machine changes.
 #
 #   ./test.sh
@@ -109,6 +109,10 @@ printf '#!/bin/sh\necho "$*" >>"$HOME/brew-calls"\n' >"$stubs/brew"
 chmod +x "$stubs/claude" "$stubs/brew"
 ( PATH="$stubs:/usr/bin:/bin"; install_agents >/dev/null )
 grep -qx "install --cask codex" "$HOME/brew-calls" || fail "install_agents did not install codex with brew"
+
+# ai-setup.sh refuses a ref that is not a full commit hash, before any download.
+[[ "$( (unset SETUP_BASE_URL; ./ai-setup.sh main) 2>&1 || true)" == *"40-character commit hash"* ]] \
+  || fail "ai-setup.sh did not refuse a branch name"
 
 guard=config/claude/plugins/dev-guard/hooks
 

@@ -97,6 +97,17 @@ REF=<commit hash>
 
 `./install-command.sh` prints this command for the current commit.
 
+### AI tools only
+
+`ai-setup.sh` installs only Claude Code and Codex with everything under [Claude Code setup](#claude-code-setup) and [Codex setup](#codex-setup). It installs nothing else: no Homebrew, apps, shell, Node.js, VS Code extensions, git or macOS settings. Codex is installed with Homebrew; a part that needs a missing tool is skipped with a warning.
+
+```bash
+REF=<commit hash>
+/bin/bash -c "$(curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/gurelyusuf/dev-setup/$REF/ai-setup.sh)" ai-setup.sh "$REF"
+```
+
+`./install-command.sh ai-setup.sh` prints this command for the current commit. From a local checkout: `SETUP_BASE_URL="file://$PWD" ./ai-setup.sh local`.
+
 ## Codex setup
 
 Codex has no plugin UI, so `dev-bar` there is built from Codex's own settings in `~/.codex/config.toml`:
@@ -113,6 +124,6 @@ To run one step only, add its name after the hash (the names are the functions `
 SETUP_BASE_URL="file://$PWD" ./setup.sh local configure_claude
 ```
 
-`./test.sh` runs the `dev-bar` tests (needs `claude`), the `dev-guard` hook tests, and tests the helpers that replace files, against a temporary home folder.
+`./test.sh` runs the `dev-bar` tests (needs `claude`), the `dev-guard` hook tests, and tests the helpers that replace files, against a temporary home folder, and that `ai-setup.sh` refuses a ref that is not a commit hash.
 
 The script is safe to re-run and backs up any file it replaces to `~/.dev-setup-backup/`. A re-run puts the repo version of every config file back, so settings you changed in an app since (VS Code, iTerm2) move to the backup. `~/.claude/settings.json` is the exception: keys that only your machine has are kept, and keys that are also in the repo file take the repo value.
