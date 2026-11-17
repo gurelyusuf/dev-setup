@@ -1,6 +1,8 @@
 #!/bin/bash
 # Stop hook: when the turn ends with uncommitted changes that were not there at the previous
 # stop, blocks once so they get committed (AGENTS.md: commit after every code change).
+# Run with "baseline" at session start, it only records the working tree, so changes that
+# were already there do not block.
 set -u
 
 input=$(cat)
@@ -17,6 +19,7 @@ now=$({ echo "$status"; git diff HEAD 2>/dev/null; } | shasum | cut -d' ' -f1)
 before=$(cat "$state" 2>/dev/null)
 echo "$now" >"$state"
 
+[ "${1:-}" = baseline ] && exit 0
 [ "$active" = true ] || [ -z "$status" ] || [ "$now" = "$before" ] && exit 0
 
 jq -n --arg s "$status" '{decision: "block", reason: ("AGENTS.md: commit after every code change. Uncommitted changes:\n" + $s + "\nCommit the ones you made. If they are not yours or must stay uncommitted, say so and stop.")}'

@@ -59,8 +59,8 @@ Also installed:
 - Plugins from this repo; `.claude-plugin/marketplace.json` makes this repo their marketplace:
   - `dev-bar` (`config/claude/plugins/dev-bar`), a band above the prompt with the model, context usage, git branch and Check (lint, typecheck, test), ponytail's Review and Audit, and Security (the security-audit skill) buttons.
   - `dev-guard` (`config/claude/plugins/dev-guard`), hooks that enforce some `AGENTS.md` rules instead of leaving them to the agent:
-    - Before a Bash command: refuses `git push`, `--no-verify`, attribution lines, `@username` mentions, commit subjects that are not `<type>: <description>` and the wrong package manager for the lockfile. Asks first for destructive commands, commits to a shared branch of a team repo, `gh` posts and new dependencies.
-    - When a turn ends: sends the agent back once if there are new uncommitted changes.
+    - Before a Bash command: refuses `git push`, `--no-verify`, attribution lines, `@username` mentions, commit subjects that are not `<type>: <description>` and the wrong package manager for the lockfile. Asks first for destructive commands, commits to a shared branch of a team repo, `gh` commands that are not read-only and new dependencies. It reads the command as text, so it catches mistakes, not a command built to get past it.
+    - When a turn ends: sends the agent back once if there are new uncommitted changes. Changes that were already there when the session started do not count.
     - When a session starts: archives yesterday's daily done log.
 - MCP servers: Context7 (library docs), Playwright and Chrome DevTools (browser automation)
 - Skill: [security-audit](https://github.com/cloudflare/security-audit-skill), pinned to a commit

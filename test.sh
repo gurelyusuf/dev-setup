@@ -119,8 +119,8 @@ grep -q "today row" "$log" || fail "daily-done-rotate replaced today's log"
 # stop-check blocks once for new uncommitted changes and never while it is already active.
 repo="$HOME/stop-repo"
 git init -q "$repo"
-stop_check() { # stop_check <stop_hook_active>
-  printf '{"session_id": "test", "cwd": "%s", "stop_hook_active": %s}' "$repo" "$1" | TMPDIR="$HOME" "$guard/stop-check.sh"
+stop_check() { # stop_check <stop_hook_active> [baseline]
+  printf '{"session_id": "test", "cwd": "%s", "stop_hook_active": %s}' "$repo" "$1" | TMPDIR="$HOME" "$guard/stop-check.sh" ${2:-}
 }
 [[ -z "$(stop_check false)" ]] || fail "stop-check blocked a clean repo"
 touch "$repo/new.txt"
@@ -128,5 +128,12 @@ touch "$repo/new.txt"
 [[ -z "$(stop_check false)" ]] || fail "stop-check blocked the same changes twice"
 touch "$repo/other.txt"
 [[ -z "$(stop_check true)" ]] || fail "stop-check blocked while it was already active"
+
+# stop-check baseline records changes that were already there, so only later ones block.
+rm "$HOME/claude-stop-check-test"
+[[ -z "$(stop_check false baseline)" ]] || fail "stop-check baseline printed a decision"
+[[ -z "$(stop_check false)" ]] || fail "stop-check blocked changes from before the session"
+touch "$repo/later.txt"
+[[ "$(stop_check false)" == *'"block"'* ]] || fail "stop-check did not block changes made after the baseline"
 
 echo "ok"

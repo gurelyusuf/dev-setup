@@ -13,6 +13,10 @@
     ],
     "SessionStart": [
       {
+        "matcher": "startup",
+        "hooks": [{ "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/stop-check.sh\" baseline" }]
+      },
+      {
         "hooks": [{ "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/daily-done-rotate.sh\"" }]
       }
     ]

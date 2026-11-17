@@ -14,5 +14,6 @@ date=$(head -1 "$file" | grep -Eo '[0-9]{2}-[0-9]{2}-[0-9]{4}') ||
 
 target="$archive/$date-daily-done.md"
 [ -e "$target" ] && { echo "daily-done-rotate: $target already exists" >&2; exit 1; }
-mkdir -p "$archive" && mv "$file" "$target" || exit 1
-printf '# Daily Done - %s\n\n| Saat | Yer | Konu | Yapılan |\n| --- | --- | --- | --- |\n' "$today" >"$file"
+# Another session may rotate at the same moment: never replace its archive or its new log.
+mkdir -p "$archive" && mv -n "$file" "$target" || exit 1
+[ -e "$file" ] || printf '# Daily Done - %s\n\n| Saat | Yer | Konu | Yapılan |\n| --- | --- | --- | --- |\n' "$today" >"$file"

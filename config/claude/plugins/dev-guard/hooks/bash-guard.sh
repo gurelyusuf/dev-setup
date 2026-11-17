@@ -1,6 +1,8 @@
 #!/bin/bash
 # PreToolUse hook for the Bash tool: enforces the command rules in ~/.claude/AGENTS.md.
 # Prints a deny/ask decision as JSON, or nothing to let the command through.
+# It reads the command as text, so it catches mistakes, not a command built to get past it
+# (bash -c "git push" goes through).
 set -u
 
 input=$(cat)
@@ -17,13 +19,22 @@ decide() { # decide <deny|ask> <reason>
 
 S='[[:space:]]'
 E="($S|\$)"
-# "git", any global options, then the subcommand follows.
-G="(^|$S)git($S+(-[Cc]$S+[^[:space:]]+|--[^[:space:]]+))*$S+"
+# "git" (also by path), any global options, then the subcommand follows.
+G="(^|$S|/)git($S+(-[Cc]$S+[^[:space:]]+|--[^[:space:]]+))*$S+"
+# Start of a segment, after any VAR=value prefixes.
+P="^([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
 
-# Quoted text becomes Q, redirects are dropped and the command is split into one segment per
-# line, so words inside a commit message or an echo are not mistaken for commands.
-segs=$(sed -E "s/\"[^\"]*\"/Q/g; s/'[^']*'/Q/g; s/[0-9]*>+&?$S*[^[:space:]]*//g" <<<"$cmd" |
-  tr ';&|(' '\n\n\n\n' | sed -E "s/^$S+//")
+# The command is split into one segment per line. First heredoc bodies and redirects are
+# dropped and quoted text becomes Q, so words inside a commit message or an echo are not
+# mistaken for commands. Lines are joined with \r meanwhile, because a quote can span lines.
+segs=$(awk -v q="'" '
+  tag != "" { if ($0 ~ "^[ \t]*" tag "$") tag = ""; next }
+  { print }
+  match($0, "(^|[^<])<<-?[ \t]*[\"" q "]?[A-Za-z_][A-Za-z_0-9]*") {
+    tag = substr($0, RSTART, RLENGTH); sub(/^.*[^A-Za-z_0-9]/, "", tag)
+  }' <<<"$cmd" | tr '\n' '\r' |
+  sed -E "s/\"([^\"\\\\]|\\\\.)*\"/Q/g; s/'[^']*'/Q/g; s/[0-9]*>+&?$S*[^[:space:]]*//g" |
+  tr '\r;&|()`' '\n\n\n\n\n\n\n' | sed -E "s/^$S+//")
 seg() { grep -Eq -- "$1" <<<"$segs"; }  # matches the structure of one command segment
 raw() { grep -Eiq -- "$1" <<<"$cmd"; }  # matches anywhere, quoted text included
 
@@ -34,20 +45,22 @@ seg "${G}commit$E" && is_commit=true
 
 seg "${G}push$E" && decide deny "AGENTS.md: never push, only commit."
 
-{ seg "${G}.*--no-verify" || seg "${G}commit($S.*)?$S-[a-zA-Z]*n[a-zA-Z]*$E"; } &&
+# -uno is --untracked-files=no, not -n.
+{ seg "${G}.*--no-verify" || seg "${G}commit($S.*)?$S-[a-tv-zA-Z]*n[a-zA-Z]*$E"; } &&
   decide deny "AGENTS.md: never bypass hooks (--no-verify)."
 
 if $is_commit || seg "(^|$S)gh$S+(pr|issue)$E"; then
   raw 'co-authored-by|generated with \[?claude' &&
     decide deny "AGENTS.md: no Co-Authored-By trailers or other attribution lines."
   raw "(^|[^[:alnum:]_/.@\`])@[[:alnum:]][[:alnum:]-]*([^[:alnum:]/-]|\$)" &&
-    decide deny "AGENTS.md: no @username in commits, PRs or issues; it notifies them. Drop the @ or wrap it in backticks."
+    decide deny "AGENTS.md: no @username in commits, PRs or issues; it notifies them. Drop the @, or wrap it in backticks inside a quoted heredoc (in a double-quoted -m, backticks run as a command)."
 fi
 
 if $is_commit; then
   nl=$'\n'
-  re_heredoc="<<-?[\"']?[A-Za-z_]+[\"']?[^${nl}]*${nl}([^${nl}]*)"
-  re_m="(-[a-zA-Z]*m|--message=?)$S*[\"']([^\"'${nl}]*)"
+  # Only a heredoc or -m on the commit's own line is its message.
+  re_heredoc="commit[^${nl}]*<<-?[\"']?[A-Za-z_]+[\"']?[^${nl}]*${nl}([^${nl}]*)"
+  re_m="commit[^${nl}]*(-[a-zA-Z]*m|--message=?)$S*[\"']([^\"'${nl}]*)"
   subject=
   if [[ $cmd =~ $re_heredoc ]]; then
     subject=${BASH_REMATCH[1]}
@@ -73,13 +86,13 @@ case $pm in
   yarn) other='npm|pnpm' ;;
   *) other= ;;
 esac
-[ -n "$other" ] && seg "^($other)$S" && ! seg "^($other)$S(.*$S)?(-g|--global)$E" &&
+[ -n "$other" ] && seg "${P}($other)$S" && ! seg "${P}($other)$S(.*$S)?(-g|--global)$E" &&
   decide deny "AGENTS.md: the lockfile here belongs to $pm; never mix package managers."
 
 # --- ask ---
 
-seg "(^|$S)rm$S+(.*$S)?(-[a-zA-Z]*[rR][a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*[rR]|-[rR]$S+(.*$S)?-f|-f$S+(.*$S)?-[rR]|--recursive.*--force|--force.*--recursive)" &&
-  decide ask "AGENTS.md: destructive command (rm -rf)."
+grep -E "(^|$S)rm$S" <<<"$segs" | grep -E "$S(-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)$E" |
+  grep -Eq "$S(-[a-zA-Z]*f[a-zA-Z]*|--force)$E" && decide ask "AGENTS.md: destructive command (rm -rf)."
 seg "${G}reset$S(.*$S)?--hard" && decide ask "AGENTS.md: destructive command (git reset --hard)."
 seg "(^|$S)docker($S+|-)compose$S.*down$S(.*$S)?(-v|--volumes)$E" &&
   decide ask "AGENTS.md: destructive command (docker compose down -v)."
@@ -98,11 +111,14 @@ if $is_commit; then
     decide ask "AGENTS.md: this repo has other contributors and '$branch' is a shared branch."
 fi
 
-seg "(^|$S)gh$S+(pr|issue)$S+(create|comment|review)$E" &&
+# gh: every subcommand that is not read-only reaches other people.
+gh_cmds=$(grep -Eo "(^|$S)gh$S+(pr|issue|release|repo|gist|run|workflow|label)$S+[^[:space:]]+" <<<"$segs")
+{ { [ -n "$gh_cmds" ] && grep -Evq "$S(view|list|status|diff|checks|checkout|watch|download|clone)\$" <<<"$gh_cmds"; } ||
+  seg "(^|$S)gh$S+api$S(.*$S)?(-X[A-Za-z]*|--method|-f|-F|--field|--raw-field|--input)($S|=|\$)"; } &&
   decide ask "AGENTS.md: never post anything outward without approval."
 
-seg "^(npm|pnpm|yarn)$S+(install|i|add)$S+(.*$S)?[^-[:space:]]" &&
-  ! seg "^(npm|pnpm|yarn)$S(.*$S)?(-g|--global)$E" &&
+seg "${P}(npm|pnpm|yarn)$S+(install|i|add)$S+(.*$S)?[^-[:space:]]" &&
+  ! seg "${P}(npm|pnpm|yarn)$S(.*$S)?(-g|--global)$E" &&
   decide ask "AGENTS.md: ask before adding a new dependency."
 
 exit 0
