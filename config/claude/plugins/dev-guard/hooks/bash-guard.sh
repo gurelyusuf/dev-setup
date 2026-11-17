@@ -69,11 +69,12 @@ fi
 if $is_commit; then
   nl=$'\n'
   # The subject is the commit's first -m, or the first line of the commit's own heredoc when
-  # there is no -m or the -m reads the heredoc.
-  re_m="commit[^\"'${nl}]*(-[a-zA-Z]*m|--message=?)$S*[\"']([^\"'${nl}]*)"
+  # there is no -m or the -m reads the heredoc. Only the listed options may bring a quoted
+  # value before -m; allowing any option would let a second message pass as the subject.
+  re_m="commit([^\"'${nl}]|--(author|date|trailer|cleanup)[= ](\"[^\"]*\"|'[^']*'))*(-[a-zA-Z]*m|--message=?)$S*[\"']([^\"'${nl}]*)"
   re_heredoc="commit[^;&|${nl}]*<<-?[\"']?[A-Za-z_]+[\"']?[^${nl}]*${nl}([^${nl}]*)"
   subject=
-  [[ $cmd =~ $re_m ]] && subject=${BASH_REMATCH[2]}
+  [[ $cmd =~ $re_m ]] && subject=${BASH_REMATCH[5]}
   [[ (-z $subject || $subject == \$*) && $cmd =~ $re_heredoc ]] && subject=${BASH_REMATCH[1]}
   re_cc='^(feat|fix|refactor|docs|test|chore|perf|ci)(\([^)]+\))?!?: [^A-Z ]'
   # A subject that is a shell variable cannot be checked here.
@@ -121,15 +122,23 @@ fi
 
 # gh: every subcommand that is not read-only reaches other people. gh_cmds holds
 # "gh <group> <verb>" with any "-flag value" pairs between them skipped.
-gh_cmds=$(grep -Eo "(^|$S)gh$S+[a-z-]+$S+(-[^[:space:]]+$S+[^[:space:]]+$S+)*[^[:space:]]+" <<<"$segs" |
-  grep -Ev "(^|$S)gh$S+(api|search|help|browse|completion)$S")
-gh_api_writes() {
-  seg "(^|$S)gh$S+api$E" || return 1
-  # A query from a file cannot be read here, so it counts as a write.
-  raw "query=[\"']?($S*mutation|@)" && return 0
-  seg "(^|$S)gh$S+api$S(.*$S)?(-X|--method)($S|=)*GET$E" && return 1
-  seg "(^|$S)gh$S+api$S(.*$S)?graphql$E" && return 1
-  seg "(^|$S)gh$S+api$S(.*$S)?(-X[A-Za-z]*|--method|-f|-F|--field|--raw-field|--input)($S|=|\$)"
+gh_cmds=$(grep -Eo "${P}gh$S+[a-z-]+$S+(-[^[:space:]]+$S+[^[:space:]]+$S+)*[^[:space:]]+" <<<"$segs" |
+  grep -Ev "${P}gh$S+(api|search|help|browse|completion|status)$S")
+gh_api_writes() { # checks each gh api call on its own, so a read cannot cover for a write
+  local s graphql=0 reads
+  local re_api="${P}gh$S+api$E" re_get="$S(-X|--method)($S|=)*GET$E" re_graphql="${S}graphql$E"
+  local re_write="$S(-X[A-Za-z]*|--method|-f|-F|--field|--raw-field|--input)($S|=|\$)"
+  raw "query=[\"']?$S*mutation" && return 0
+  while IFS= read -r s; do
+    [[ $s =~ $re_api ]] || continue
+    [[ $s =~ $re_get ]] && continue
+    if [[ $s =~ $re_graphql ]]; then graphql=$((graphql + 1)); continue; fi
+    [[ $s =~ $re_write ]] && return 0
+  done <<<"$segs"
+  # A graphql call is a read only when its query is written inline and starts as one. The
+  # query text is quoted, so it is counted in the whole command, not per call.
+  reads=$(grep -Eio "query=[\"']?$S*(query[[:space:]({]|\{)" <<<"$cmd" | wc -l)
+  [ "$reads" -lt "$graphql" ]
 }
 { { [ -n "$gh_cmds" ] &&
   grep -Evq "$S(([a-z]+-)?(view|list|status|diff|checks|checkout|watch|download|clone|get)|--help|-h)\$" <<<"$gh_cmds"; } ||
