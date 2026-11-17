@@ -24,16 +24,26 @@ G="(^|$S|/)git($S+(-[Cc]$S+[^[:space:]]+|--[^[:space:]]+))*$S+"
 # Start of a segment, after any VAR=value prefixes.
 P="^([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
 
-# The command is split into one segment per line. First heredoc bodies and redirects are
-# dropped and quoted text becomes Q, so words inside a commit message or an echo are not
-# mistaken for commands. Lines are joined with \r meanwhile, because a quote can span lines.
+# The command is split into one segment per line. First heredoc bodies, comments and
+# redirects are dropped and quoted text becomes Q, so words inside a commit message or an
+# echo are not mistaken for commands. Lines are joined with \r meanwhile, because a quote
+# can span lines.
+cr=$'\r'
+quoted="\"([^\"\\\\]|\\\\.)*\"|'[^']*'"
+# A << with no closing line is not a heredoc (a bit shift, say): its lines are kept.
 segs=$(awk -v q="'" '
-  tag != "" { if ($0 ~ "^[ \t]*" tag "$") tag = ""; next }
+  tag != "" {
+    if ($0 ~ "^[ \t]*" tag "$") { tag = ""; held = "" } else held = held $0 "\n"
+    next
+  }
   { print }
   match($0, "(^|[^<])<<-?[ \t]*[\"" q "]?[A-Za-z_][A-Za-z_0-9]*") {
     tag = substr($0, RSTART, RLENGTH); sub(/^.*[^A-Za-z_0-9]/, "", tag)
-  }' <<<"$cmd" | tr '\n' '\r' |
-  sed -E "s/\"([^\"\\\\]|\\\\.)*\"/Q/g; s/'[^']*'/Q/g; s/[0-9]*>+&?$S*[^[:space:]]*//g" |
+  }
+  END { printf "%s", held }' <<<"$cmd" | tr '\n' '\r' |
+  # The leftmost match wins, so a # inside quotes is no comment and a quote inside a comment
+  # opens nothing.
+  sed -E "s/($quoted)|(^|$S)#[^$cr]*/\\1/g; s/$quoted/Q/g; s/[0-9]*>+&?$S*[^[:space:]]*//g" |
   tr '\r;&|()`' '\n\n\n\n\n\n\n' | sed -E "s/^$S+//")
 seg() { grep -Eq -- "$1" <<<"$segs"; }  # matches the structure of one command segment
 raw() { grep -Eiq -- "$1" <<<"$cmd"; }  # matches anywhere, quoted text included
@@ -58,15 +68,13 @@ fi
 
 if $is_commit; then
   nl=$'\n'
-  # Only a heredoc or -m on the commit's own line is its message.
-  re_heredoc="commit[^${nl}]*<<-?[\"']?[A-Za-z_]+[\"']?[^${nl}]*${nl}([^${nl}]*)"
-  re_m="commit[^${nl}]*(-[a-zA-Z]*m|--message=?)$S*[\"']([^\"'${nl}]*)"
+  # The subject is the commit's first -m, or the first line of the commit's own heredoc when
+  # there is no -m or the -m reads the heredoc.
+  re_m="commit[^\"'${nl}]*(-[a-zA-Z]*m|--message=?)$S*[\"']([^\"'${nl}]*)"
+  re_heredoc="commit[^;&|${nl}]*<<-?[\"']?[A-Za-z_]+[\"']?[^${nl}]*${nl}([^${nl}]*)"
   subject=
-  if [[ $cmd =~ $re_heredoc ]]; then
-    subject=${BASH_REMATCH[1]}
-  elif [[ $cmd =~ $re_m ]]; then
-    subject=${BASH_REMATCH[2]}
-  fi
+  [[ $cmd =~ $re_m ]] && subject=${BASH_REMATCH[2]}
+  [[ (-z $subject || $subject == \$*) && $cmd =~ $re_heredoc ]] && subject=${BASH_REMATCH[1]}
   re_cc='^(feat|fix|refactor|docs|test|chore|perf|ci)(\([^)]+\))?!?: [^A-Z ]'
   # A subject that is a shell variable cannot be checked here.
   [[ -n $subject && $subject != \$* && ! $subject =~ $re_cc ]] &&
@@ -111,11 +119,21 @@ if $is_commit; then
     decide ask "AGENTS.md: this repo has other contributors and '$branch' is a shared branch."
 fi
 
-# gh: every subcommand that is not read-only reaches other people.
-gh_cmds=$(grep -Eo "(^|$S)gh$S+(pr|issue|release|repo|gist|run|workflow|label)$S+[^[:space:]]+" <<<"$segs")
-{ { [ -n "$gh_cmds" ] && grep -Evq "$S(view|list|status|diff|checks|checkout|watch|download|clone)\$" <<<"$gh_cmds"; } ||
-  seg "(^|$S)gh$S+api$S(.*$S)?(-X[A-Za-z]*|--method|-f|-F|--field|--raw-field|--input)($S|=|\$)"; } &&
-  decide ask "AGENTS.md: never post anything outward without approval."
+# gh: every subcommand that is not read-only reaches other people. gh_cmds holds
+# "gh <group> <verb>" with any "-flag value" pairs between them skipped.
+gh_cmds=$(grep -Eo "(^|$S)gh$S+[a-z-]+$S+(-[^[:space:]]+$S+[^[:space:]]+$S+)*[^[:space:]]+" <<<"$segs" |
+  grep -Ev "(^|$S)gh$S+(api|search|help|browse|completion)$S")
+gh_api_writes() {
+  seg "(^|$S)gh$S+api$E" || return 1
+  # A query from a file cannot be read here, so it counts as a write.
+  raw "query=[\"']?($S*mutation|@)" && return 0
+  seg "(^|$S)gh$S+api$S(.*$S)?(-X|--method)($S|=)*GET$E" && return 1
+  seg "(^|$S)gh$S+api$S(.*$S)?graphql$E" && return 1
+  seg "(^|$S)gh$S+api$S(.*$S)?(-X[A-Za-z]*|--method|-f|-F|--field|--raw-field|--input)($S|=|\$)"
+}
+{ { [ -n "$gh_cmds" ] &&
+  grep -Evq "$S(([a-z]+-)?(view|list|status|diff|checks|checkout|watch|download|clone|get)|--help|-h)\$" <<<"$gh_cmds"; } ||
+  gh_api_writes; } && decide ask "AGENTS.md: never post anything outward without approval."
 
 seg "${P}(npm|pnpm|yarn)$S+(install|i|add)$S+(.*$S)?[^-[:space:]]" &&
   ! seg "${P}(npm|pnpm|yarn)$S(.*$S)?(-g|--global)$E" &&

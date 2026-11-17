@@ -136,4 +136,9 @@ rm "$HOME/claude-stop-check-test"
 touch "$repo/later.txt"
 [[ "$(stop_check false)" == *'"block"'* ]] || fail "stop-check did not block changes made after the baseline"
 
+# stop-check baseline keeps the record of a session that already has one.
+touch "$repo/more.txt"
+stop_check false baseline
+[[ "$(stop_check false)" == *'"block"'* ]] || fail "stop-check baseline forgave changes made during the session"
+
 echo "ok"

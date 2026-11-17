@@ -2,7 +2,8 @@
 # Stop hook: when the turn ends with uncommitted changes that were not there at the previous
 # stop, blocks once so they get committed (AGENTS.md: commit after every code change).
 # Run with "baseline" at session start, it only records the working tree, so changes that
-# were already there do not block.
+# were already there do not block. A session that already has a record keeps it, so a
+# resume or compaction does not forgive the changes made so far.
 set -u
 
 input=$(cat)
@@ -16,10 +17,13 @@ status=$(git status --porcelain 2>/dev/null) || exit 0 # not a git repo
 # Remember the working tree per session, so changes left alone on purpose block only once.
 state="${TMPDIR:-/tmp}/claude-stop-check-$sid"
 now=$({ echo "$status"; git diff HEAD 2>/dev/null; } | shasum | cut -d' ' -f1)
+if [ "${1:-}" = baseline ]; then
+  [ -e "$state" ] || echo "$now" >"$state"
+  exit 0
+fi
 before=$(cat "$state" 2>/dev/null)
 echo "$now" >"$state"
 
-[ "${1:-}" = baseline ] && exit 0
 [ "$active" = true ] || [ -z "$status" ] || [ "$now" = "$before" ] && exit 0
 
 jq -n --arg s "$status" '{decision: "block", reason: ("AGENTS.md: commit after every code change. Uncommitted changes:\n" + $s + "\nCommit the ones you made. If they are not yours or must stay uncommitted, say so and stop.")}'
