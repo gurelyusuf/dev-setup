@@ -21,8 +21,8 @@ S='[[:space:]]'
 E="($S|\$)"
 # "git" (also by path), any global options, then the subcommand follows.
 G="(^|$S|/)git($S+(-[Cc]$S+[^[:space:]]+|--[^[:space:]]+))*$S+"
-# Start of a segment, after any VAR=value prefixes.
-P="^([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
+# Start of a segment, after any shell keywords and VAR=value prefixes.
+P="^((if|then|else|elif|do|while|until|time|!|\{)$S+)*([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
 
 # The command is split into one segment per line. First heredoc bodies, comments and
 # redirects are dropped and quoted text becomes Q, so words inside a commit message or an
@@ -128,6 +128,7 @@ gh_api_writes() { # checks each gh api call on its own, so a read cannot cover f
   local s graphql=0 reads
   local re_api="${P}gh$S+api$E" re_get="$S(-X|--method)($S|=)*GET$E" re_graphql="${S}graphql$E"
   local re_write="$S(-X[A-Za-z]*|--method|-f|-F|--field|--raw-field|--input)($S|=|\$)"
+  seg "$re_api" || return 1
   raw "query=[\"']?$S*mutation" && return 0
   while IFS= read -r s; do
     [[ $s =~ $re_api ]] || continue
@@ -136,8 +137,9 @@ gh_api_writes() { # checks each gh api call on its own, so a read cannot cover f
     [[ $s =~ $re_write ]] && return 0
   done <<<"$segs"
   # A graphql call is a read only when its query is written inline and starts as one. The
-  # query text is quoted, so it is counted in the whole command, not per call.
-  reads=$(grep -Eio "query=[\"']?$S*(query[[:space:]({]|\{)" <<<"$cmd" | wc -l)
+  # query text is quoted, so it is counted in the whole command, not per call; lines are
+  # joined because a query often starts on the line after query=.
+  reads=$(grep -Eio "query=[\"']?$S*(query[[:space:]({]|\{)" <<<"${cmd//$'\n'/ }" | wc -l)
   [ "$reads" -lt "$graphql" ]
 }
 { { [ -n "$gh_cmds" ] &&
