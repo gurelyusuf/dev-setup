@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Tests for the dev-bar plugin and for the setup.sh helpers that replace or edit
-# files in the home folder. The helpers run against a temporary HOME, so nothing on
-# this machine changes.
+# Tests for the dev-bar and dev-guard plugins and for the setup.sh helpers that
+# replace or edit files in the home folder. The helpers run against a temporary HOME,
+# so nothing on this machine changes.
 #
 #   ./test.sh
 
@@ -10,6 +10,8 @@ cd "$(dirname "$0")"
 
 # Before HOME changes: claude runs with the real home folder.
 claude plugin test config/claude/plugins/dev-bar
+
+config/claude/plugins/dev-guard/hooks/bash-guard.test.sh >/dev/null
 
 tmp_home="$(mktemp -d)"
 trap 'rm -rf "$tmp_home"' EXIT
@@ -98,5 +100,33 @@ with open(sys.argv[1], "rb") as f:
 assert tui["status_line"] == ["model-with-reasoning", "context-used", "git-branch"], "status line was not added"
 assert tui["presets"] == {"1": {"input": "mine"}}, "existing presets were changed"
 PY
+
+guard=config/claude/plugins/dev-guard/hooks
+
+# daily-done-rotate archives a log from another day and starts today's.
+log="$HOME/Desktop/daily-done.md"
+mkdir -p "$HOME/Desktop"
+printf '# Daily Done - 01-01-2026\n\nold row\n' >"$log"
+"$guard/daily-done-rotate.sh" </dev/null || fail "daily-done-rotate failed"
+grep -q "old row" "$HOME/Desktop/daily-done-archive/01-01-2026-daily-done.md" || fail "daily-done-rotate did not archive the old log"
+[[ "$(head -1 "$log")" == "# Daily Done - $(date +%d-%m-%Y)" ]] || fail "daily-done-rotate did not start today's log"
+
+# daily-done-rotate leaves today's log alone.
+echo "today row" >>"$log"
+"$guard/daily-done-rotate.sh" </dev/null || fail "daily-done-rotate failed on today's log"
+grep -q "today row" "$log" || fail "daily-done-rotate replaced today's log"
+
+# stop-check blocks once for new uncommitted changes and never while it is already active.
+repo="$HOME/stop-repo"
+git init -q "$repo"
+stop_check() { # stop_check <stop_hook_active>
+  printf '{"session_id": "test", "cwd": "%s", "stop_hook_active": %s}' "$repo" "$1" | TMPDIR="$HOME" "$guard/stop-check.sh"
+}
+[[ -z "$(stop_check false)" ]] || fail "stop-check blocked a clean repo"
+touch "$repo/new.txt"
+[[ "$(stop_check false)" == *'"block"'* ]] || fail "stop-check did not block new uncommitted changes"
+[[ -z "$(stop_check false)" ]] || fail "stop-check blocked the same changes twice"
+touch "$repo/other.txt"
+[[ -z "$(stop_check true)" ]] || fail "stop-check blocked while it was already active"
 
 echo "ok"

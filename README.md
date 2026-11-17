@@ -56,7 +56,12 @@ Files from `config/claude/` go into `~/.claude/`:
 Also installed:
 
 - Plugins: [context-mode](https://github.com/mksglu/context-mode) (keeps large tool output out of the context), [caveman](https://github.com/JuliusBrussee/caveman) (terse replies; default mode in `config/caveman/config.json`), [ponytail](https://github.com/DietrichGebert/ponytail) (least new code; `lite` mode in `config/ponytail/config.json`, task board stays local; its band above the prompt is hidden). `AGENTS.md` splits their roles so they don't conflict.
-- Plugin from this repo: `dev-bar` (`config/claude/plugins/dev-bar`), a band above the prompt with the model, context usage, git branch and Check (lint, typecheck, test), ponytail's Review and Audit, and Security (the security-audit skill) buttons. `.claude-plugin/marketplace.json` makes this repo its marketplace.
+- Plugins from this repo; `.claude-plugin/marketplace.json` makes this repo their marketplace:
+  - `dev-bar` (`config/claude/plugins/dev-bar`), a band above the prompt with the model, context usage, git branch and Check (lint, typecheck, test), ponytail's Review and Audit, and Security (the security-audit skill) buttons.
+  - `dev-guard` (`config/claude/plugins/dev-guard`), hooks that enforce some `AGENTS.md` rules instead of leaving them to the agent:
+    - Before a Bash command: refuses `git push`, `--no-verify`, attribution lines, `@username` mentions, commit subjects that are not `<type>: <description>` and the wrong package manager for the lockfile. Asks first for destructive commands, commits to a shared branch of a team repo, `gh` posts and new dependencies.
+    - When a turn ends: sends the agent back once if there are new uncommitted changes.
+    - When a session starts: archives yesterday's daily done log.
 - MCP servers: Context7 (library docs), Playwright and Chrome DevTools (browser automation)
 - Skill: [security-audit](https://github.com/cloudflare/security-audit-skill), pinned to a commit
 
@@ -108,6 +113,6 @@ To run one step only, add its name after the hash (the names are the functions `
 SETUP_BASE_URL="file://$PWD" ./setup.sh local configure_claude
 ```
 
-`./test.sh` runs the `dev-bar` tests (needs `claude`) and tests the helpers that replace files, against a temporary home folder.
+`./test.sh` runs the `dev-bar` tests (needs `claude`), the `dev-guard` hook tests, and tests the helpers that replace files, against a temporary home folder.
 
 The script is safe to re-run and backs up any file it replaces to `~/.dev-setup-backup/`. A re-run puts the repo version of every config file back, so settings you changed in an app since (VS Code, iTerm2) move to the backup. `~/.claude/settings.json` is the exception: keys that only your machine has are kept, and keys that are also in the repo file take the repo value.

@@ -67,6 +67,7 @@ mksglu/context-mode|context-mode@context-mode
 JuliusBrussee/caveman|caveman@caveman
 DietrichGebert/ponytail|ponytail@ponytail
 $REPO|dev-bar@dev-setup
+$REPO|dev-guard@dev-setup
 "
 
 # Skill from cloudflare/security-audit-skill, pinned like everything else here.

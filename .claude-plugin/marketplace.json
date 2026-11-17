@@ -1,5 +1,8 @@
 {
   "name": "dev-setup",
   "owner": { "name": "gurelyusuf" },
-  "plugins": [{ "name": "dev-bar", "source": "./config/claude/plugins/dev-bar" }]
+  "plugins": [
+    { "name": "dev-bar", "source": "./config/claude/plugins/dev-bar" },
+    { "name": "dev-guard", "source": "./config/claude/plugins/dev-guard" }
+  ]
 }
