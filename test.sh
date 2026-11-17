@@ -101,6 +101,15 @@ assert tui["status_line"] == ["model-with-reasoning", "context-used", "git-branc
 assert tui["presets"] == {"1": {"input": "mine"}}, "existing presets were changed"
 PY
 
+# install_agents installs Codex with brew when codex is missing.
+stubs="$HOME/stubs"
+mkdir -p "$stubs"
+printf '#!/bin/sh\n' >"$stubs/claude"
+printf '#!/bin/sh\necho "$*" >>"$HOME/brew-calls"\n' >"$stubs/brew"
+chmod +x "$stubs/claude" "$stubs/brew"
+( PATH="$stubs:/usr/bin:/bin"; install_agents >/dev/null )
+grep -qx "install --cask codex" "$HOME/brew-calls" || fail "install_agents did not install codex with brew"
+
 guard=config/claude/plugins/dev-guard/hooks
 
 # daily-done-rotate archives a log from another day and starts today's.

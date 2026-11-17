@@ -43,7 +43,6 @@ google-chrome|Google Chrome.app
 postman|Postman.app
 microsoft-teams|Microsoft Teams.app
 pgadmin4|pgAdmin 4.app
-codex|
 font-jetbrains-mono-nerd-font|
 "
 
@@ -318,7 +317,14 @@ install_agents() {
   else
     curl --proto '=https' --tlsv1.2 -fsSL https://claude.ai/install.sh | bash || warn "Claude Code install failed"
   fi
-  have codex && info "codex is installed" || warn "codex not found (cask install may have failed)"
+  # Installed here, not from CASKS, so ai-setup.sh installs it too.
+  if have codex; then
+    info "already installed: codex"
+  elif have brew; then
+    brew install --cask codex </dev/null || warn "codex install failed"
+  else
+    warn "Homebrew not found; codex was not installed"
+  fi
 }
 
 configure_claude() {
