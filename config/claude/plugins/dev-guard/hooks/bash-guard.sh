@@ -21,10 +21,14 @@ S='[[:space:]]'
 E="($S|\$)"
 # "git" (also by path), any global options, then the subcommand follows.
 G="(^|$S|/)git($S+(-[Cc]$S+[^[:space:]]+|--[^[:space:]]+))*$S+"
+# A wrapper's own arguments: only words that look like an option or a value (-n1, 60, {},
+# VAR=x). Any other word is the wrapped command, and the words after it are its arguments.
+W="([^[:space:]]*[-0-9{}=][^[:space:]]*$S+)*"
 # Where a command starts: at the start of a segment or after a wrapper command and its
 # arguments, then past any shell keywords and VAR=value prefixes. "command" is not a wrapper
-# here, because "command -v pnpm" only looks a program up.
-P="(^|(^|$S)(xargs|timeout|sudo|env|exec|nohup)$S(.*$S)?)((if|then|else|elif|do|while|until|time|!|\{)$S+)*([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
+# here, because "command -v pnpm" only looks a program up; exec counts only at the start,
+# so "docker exec" does not.
+P="(^|((^|$S)(xargs|timeout|sudo|env|nohup)|^exec)$S+$W)((if|then|else|elif|do|while|until|time|!|\{)$S+)*([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
 
 # The command is split into one segment per line. First heredoc bodies, comments and
 # redirects are dropped and quoted text becomes Q, so words inside a commit message or an
@@ -150,7 +154,7 @@ gh_api_writes() { # checks each gh api call on its own, so a read cannot cover f
 
 # Under xargs the package names come from stdin, so a bare install adds them too.
 { seg "${P}(npm|pnpm|yarn)$S+(install|i|add)$S+(.*$S)?[^-[:space:]]" ||
-  seg "(^|$S)xargs$S(.*$S)?(npm|pnpm|yarn)$S+(install|i|add)$E"; } &&
+  seg "(^|$S)xargs$S+$W(npm|pnpm|yarn)$S+(install|i|add)$E"; } &&
   ! seg "${P}(npm|pnpm|yarn)$S(.*$S)?(-g|--global)$E" &&
   decide ask "AGENTS.md: ask before adding a new dependency."
 
