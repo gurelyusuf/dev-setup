@@ -1,5 +1,5 @@
 {
   "name": "dev-guard",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Hooks that enforce AGENTS.md rules: guard Bash commands, block a stop with uncommitted changes, rotate the daily done log"
 }

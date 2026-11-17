@@ -21,8 +21,10 @@ S='[[:space:]]'
 E="($S|\$)"
 # "git" (also by path), any global options, then the subcommand follows.
 G="(^|$S|/)git($S+(-[Cc]$S+[^[:space:]]+|--[^[:space:]]+))*$S+"
-# Start of a segment, after any shell keywords and VAR=value prefixes.
-P="^((if|then|else|elif|do|while|until|time|!|\{)$S+)*([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
+# Where a command starts: at the start of a segment or after a wrapper command and its
+# arguments, then past any shell keywords and VAR=value prefixes. "command" is not a wrapper
+# here, because "command -v pnpm" only looks a program up.
+P="(^|(^|$S)(xargs|timeout|sudo|env|exec|nohup)$S(.*$S)?)((if|then|else|elif|do|while|until|time|!|\{)$S+)*([A-Za-z_][A-Za-z_0-9]*=[^[:space:]]*$S+)*"
 
 # The command is split into one segment per line. First heredoc bodies, comments and
 # redirects are dropped and quoted text becomes Q, so words inside a commit message or an
@@ -146,7 +148,9 @@ gh_api_writes() { # checks each gh api call on its own, so a read cannot cover f
   grep -Evq "$S(([a-z]+-)?(view|list|status|diff|checks|checkout|watch|download|clone|get)|--help|-h)\$" <<<"$gh_cmds"; } ||
   gh_api_writes; } && decide ask "AGENTS.md: never post anything outward without approval."
 
-seg "${P}(npm|pnpm|yarn)$S+(install|i|add)$S+(.*$S)?[^-[:space:]]" &&
+# Under xargs the package names come from stdin, so a bare install adds them too.
+{ seg "${P}(npm|pnpm|yarn)$S+(install|i|add)$S+(.*$S)?[^-[:space:]]" ||
+  seg "(^|$S)xargs$S(.*$S)?(npm|pnpm|yarn)$S+(install|i|add)$E"; } &&
   ! seg "${P}(npm|pnpm|yarn)$S(.*$S)?(-g|--global)$E" &&
   decide ask "AGENTS.md: ask before adding a new dependency."
 
